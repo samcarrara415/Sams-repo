@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question12.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 12</h2>
+        <h1 id="question">What year did the May 4th visitors center open ?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question13.html')">2000</button> 
+            <button onclick="checkAnswer(this, false, 'question13.html')">2018</button>
+            <button onclick="checkAnswer(this, true, 'question13.html')">2013</button> <!-- C is correct -->
+            <button onclick="checkAnswer(this, false, 'question13.html')">1984</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

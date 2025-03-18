@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question7.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 7</h2>
+        <h1 id="question">When was the last conference title that we won in football</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question8.html')">2009</button>
+            <button onclick="checkAnswer(this, true, 'question8.html')">1972</button> <!-- B is correct -->
+            <button onclick="checkAnswer(this, false, 'question8.html')">2019</button>
+            <button onclick="checkAnswer(this, false, 'question8.html')">1932</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

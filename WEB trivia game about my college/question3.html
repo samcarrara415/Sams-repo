@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question3.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 3</h2>
+        <h1 id="question">How many students are enrolled in the fall semester?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question4.html')">30,000</button>
+            <button onclick="checkAnswer(this, true, 'question4.html')">34,000</button> <!-- B is correct -->
+            <button onclick="checkAnswer(this, false, 'question4.html')">10,000</button>
+            <button onclick="checkAnswer(this, false, 'question4.html')">54,000</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

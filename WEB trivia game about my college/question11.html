@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question11.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 11</h2>
+        <h1 id="question">What was the tallest building in portage county in 1970?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question12.html')">Tri towers</button> 
+            <button onclick="checkAnswer(this, false, 'question12.html')">Taylor Hall</button>
+            <button onclick="checkAnswer(this, true, 'question12.html')">The Library</button> <!-- C is correct -->
+            <button onclick="checkAnswer(this, false, 'question12.html')">Bowman Hall</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

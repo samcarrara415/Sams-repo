@@ -1,0 +1,23 @@
+<html>
+<head>
+    <title>Trivia  Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question1.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 1</h2>
+        <h1 id="question">What year was Kent State founded?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, true, 'question2.html')">September 27, 1910</button> <!-- A is correct -->
+            <button onclick="checkAnswer(this, false, 'question2.html')">September 27, 1901</button>
+            <button onclick="checkAnswer(this, false, 'question2.html')">October 2, 1922</button>
+            <button onclick="checkAnswer(this, false, 'question2.html')">July 18, 1910 </button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

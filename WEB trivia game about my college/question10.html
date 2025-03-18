@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question10.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 10</h2>
+        <h1 id="question">How many students were in the first class at Kent State in 1913?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, true, 'question11.html')">144</button> <!-- A is correct -->
+            <button onclick="checkAnswer(this, false, 'question11.html')">220</button>
+            <button onclick="checkAnswer(this, false, 'question11.html')">6,000</button> 
+            <button onclick="checkAnswer(this, false, 'question11.html')">2,000</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

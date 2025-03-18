@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question15.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 15</h2>
+        <h1 id="question">What was Kent State first called ?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'finish.html')">Kent State College</button> 
+            <button onclick="checkAnswer(this, false, 'finish.html')">Kent State Normal College</button>
+            <button onclick="checkAnswer(this, false, 'finish.html')">Kent State Normal School</button> 
+            <button onclick="checkAnswer(this, true, 'finish.html')">Ohio State Normal College at Kent</button> <!-- D is correct, All of these names were used in different time periods but this is the first one-->
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

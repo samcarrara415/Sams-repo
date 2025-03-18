@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question14.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 14</h2>
+        <h1 id="question">What year did the Kent State airport open?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question15.html')">1955</button> 
+            <button onclick="checkAnswer(this, false, 'question15.html')">1899</button>
+            <button onclick="checkAnswer(this, true, 'question15.html')">1920</button> <!-- C is correct -->
+            <button onclick="checkAnswer(this, false, 'question15.html')">1945</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>
