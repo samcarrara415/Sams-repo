@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+</head>
+<body>
+    <div id="quiz-container">
+        <h2>Welcome to the Trivia Game!</h2>
+        <p id="welcomeMessage"></p>
+        <button onclick="location.href='trivia.html';">Start Quiz</button>
+    </div>
+    <script>
+        document.getElementById('welcomeMessage').innerText = "Hello, " + (sessionStorage.getItem('userName') || "Player") + "!";
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question13n.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 13</h2>
+        <h1 id="question">In 1961 10 black squirrels are imported to Kent from where?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question14.html')">Spain</button> 
+            <button onclick="checkAnswer(this, false, 'question14.html')">New Mexico</button>
+            <button onclick="checkAnswer(this, true, 'question14.html')">Canada</button> <!-- C is correct -->
+            <button onclick="checkAnswer(this, false, 'question14.html')">West Virginia</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

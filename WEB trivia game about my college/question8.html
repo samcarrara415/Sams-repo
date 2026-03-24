@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question8.png" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 8</h2>
+        <h1 id="question">How many acres is main campus?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question9.html')">1000</button>
+            <button onclick="checkAnswer(this, false, 'question9.html')">3</button>
+            <button onclick="checkAnswer(this, true, 'question9.html')">866</button> <!-- C is correct -->
+            <button onclick="checkAnswer(this, false, 'question9.html')">452</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

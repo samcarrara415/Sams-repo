@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question9.png" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 9</h2>
+        <h1 id="question">What do you use to get into the buildings on campus?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, false, 'question10.html')">Blue card</button>
+            <button onclick="checkAnswer(this, false, 'question10.html')">Yellow card</button>
+            <button onclick="checkAnswer(this, true, 'question10.html')">Flash card</button> <!-- C is correct -->
+            <button onclick="checkAnswer(this, false, 'question10.html')">Gold card</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>

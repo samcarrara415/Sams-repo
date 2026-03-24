@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Trivia Game</title>
+    <link rel="stylesheet" type="text/css" href="trivia.css">
+    <img src="images/Trivia.png" class="image1">
+    <img src="images/Question5.jpg" class="image2">
+</head>
+<body onload="updateScore();">
+    <div id="quiz-container">
+        <div id="score">Score: 0</div>
+        <h2 id="question-number">Question 5</h2>
+        <h1 id="question">What is the oldest hall at Kent State?</h1>
+        <div class="answer-button">
+            <button onclick="checkAnswer(this, true, 'question6.html')">Merill Hall</button> <!-- A is correct -->
+            <button onclick="checkAnswer(this, false, 'question6.html')">Bowman Hall</button>
+            <button onclick="checkAnswer(this, false, 'question6.html')">Prentice Hall</button>
+            <button onclick="checkAnswer(this, false, 'question6.html')">Dunbar Hall</button>
+        </div>
+    </div>
+    <script src="trivia.js"></script>
+</body>
+</html>
