@@ -1,0 +1,9 @@
+node_modules/
+/tmp/
+*.pyc
+__pycache__/
+.DS_Store
+capture
+capture_test
+capture_test.swift
+capture.entitlements

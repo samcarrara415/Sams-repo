@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Remote Dev – Terminal + iOS Simulator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #1a1a2e; color: #e0e0e0; font-family: system-ui, sans-serif; overflow: hidden; }
+
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 36px; padding: 0 12px; background: #16213e; border-bottom: 1px solid #0f3460;
+      z-index: 100;
+    }
+    .toolbar h1 { font-size: 14px; font-weight: 600; color: #e94560; }
+    .toolbar .right { display: flex; align-items: center; gap: 8px; }
+    .toolbar .status { font-size: 11px; }
+
+    .btn {
+      background: #0f3460; color: #e0e0e0; border: 1px solid #533483;
+      padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
+      display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .btn:hover { background: #533483; }
+    .btn:active { background: #e94560; }
+    .btn.btn-green { border-color: #1b7a3d; }
+    .btn.btn-green:hover { background: #1b7a3d; }
+    .btn svg { flex-shrink: 0; }
+
+    .container { display: flex; height: calc(100% - 36px); }
+
+    .panel { display: flex; flex-direction: column; overflow: hidden; }
+    .panel-terminal { flex: 1; min-width: 200px; }
+    .panel-sim { flex: 0 0 400px; min-width: 200px; background: #0d1117; }
+
+    .divider {
+      width: 5px; cursor: col-resize; background: #0f3460;
+      transition: background 0.15s; flex-shrink: 0;
+    }
+    .divider:hover, .divider.active { background: #e94560; }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 12px; background: #16213e; font-size: 12px; font-weight: 600;
+      border-bottom: 1px solid #0f3460; flex-shrink: 0; gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    #terminal-container { flex: 1; padding: 4px; cursor: text; }
+    #terminal-container .xterm { height: 100%; }
+
+    #sim-frame {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative; background: #000;
+    }
+    #sim-canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer; touch-action: none; }
+    #sim-frame .placeholder { color: #555; font-size: 13px; text-align: center; padding: 20px; position: absolute; pointer-events: none; }
+    .sim-info { font-size: 10px; color: #666; font-weight: 400; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+    /* Quality indicator */
+    .quality-badge {
+      font-size: 9px; padding: 2px 6px; border-radius: 3px; cursor: pointer;
+      border: 1px solid #333; background: #1a1a2e; user-select: none;
+    }
+    .quality-badge.auto { border-color: #4ecca3; color: #4ecca3; }
+    .quality-badge.manual { border-color: #e94560; color: #e94560; }
+
+    /* Fullscreen */
+    .fullscreen-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: #000; flex-direction: column;
+    }
+    .fullscreen-overlay.active { display: flex; }
+    .fullscreen-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px; background: #16213e; border-bottom: 1px solid #0f3460;
+      flex-shrink: 0; z-index: 1;
+    }
+    .fullscreen-toolbar span { font-size: 12px; font-weight: 600; }
+    .fullscreen-sim-frame {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; background: #000; position: relative;
+    }
+    #fs-sim-canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer; touch-action: none; }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; z-index: 10000;
+      background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal {
+      background: #16213e; border: 1px solid #533483; border-radius: 8px;
+      width: 480px; max-width: 92vw; max-height: 80vh; display: flex; flex-direction: column;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid #0f3460; font-size: 14px; font-weight: 600;
+    }
+    .modal-header .close-btn { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; }
+    .modal-header .close-btn:hover { color: #e94560; }
+    .modal-body { padding: 8px; overflow-y: auto; flex: 1; }
+    .sim-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; border-radius: 4px; cursor: pointer; gap: 8px;
+    }
+    .sim-item:hover { background: #0f3460; }
+    .sim-item .sim-name { font-size: 13px; font-weight: 500; }
+    .sim-item .sim-runtime { font-size: 10px; color: #888; }
+    .sim-item .sim-state { font-size: 10px; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+    .sim-item .sim-state.booted { background: #1b4332; color: #4ecca3; }
+    .sim-item .sim-state.shutdown { background: #333; color: #888; }
+    .modal-loading { text-align: center; padding: 20px; color: #888; font-size: 13px; }
+
+    /* Build log */
+    .build-log {
+      background: #0d1117; border: 1px solid #0f3460; border-radius: 4px;
+      padding: 8px; margin: 8px 0; font-family: monospace; font-size: 11px;
+      max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+      color: #888;
+    }
+    .build-log .status { color: #4ecca3; font-weight: bold; }
+    .build-log .error { color: #e94560; font-weight: bold; }
+    .build-log .done { color: #6ee7b7; font-weight: bold; }
+    .build-select { width: 100%; background: #0d1117; color: #e0e0e0; border: 1px solid #0f3460; border-radius: 4px; padding: 6px 8px; font-size: 12px; margin: 4px 0; }
+
+    /* Touch ripple */
+    .touch-ripple {
+      position: absolute; width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(233, 69, 96, 0.4); pointer-events: none;
+      transform: translate(-50%, -50%) scale(0);
+      animation: ripple 0.4s ease-out forwards;
+    }
+    @keyframes ripple {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      .panel-terminal { min-height: 40%; }
+      .panel-sim { flex: 1; min-width: unset; }
+      .divider { width: 100%; height: 5px; cursor: row-resize; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Remote Dev</h1>
+  <div class="right">
+    <button class="btn" id="btn-kb" title="Dismiss keyboard">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="12" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><path d="M9 16l3 4 3-4"/></svg>
+      Close KB
+    </button>
+    <span class="status" id="conn-status" style="color:#e94560">Connecting...</span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="panel panel-terminal" id="panel-terminal">
+    <div class="panel-header"><span>Terminal</span></div>
+    <div id="terminal-container"></div>
+  </div>
+
+  <div class="divider" id="divider"></div>
+
+  <div class="panel panel-sim" id="panel-sim">
+    <div class="panel-header">
+      <span>iOS Simulator</span>
+      <div class="sim-info">
+        <span id="sim-fps"></span>
+        <span class="quality-badge auto" id="quality-badge" title="Click to cycle quality (Auto/1-5)">AUTO</span>
+        <button class="btn btn-green" id="btn-build" title="Build & Run Xcode project">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Build
+        </button>
+        <button class="btn" id="btn-launch" title="Launch / boot a simulator">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+          Sim
+        </button>
+        <button class="btn" id="btn-refocus" title="Re-detect simulator window">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refocus
+        </button>
+        <button class="btn" id="btn-home" title="Home button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="btn" id="btn-appswitcher" title="App Switcher">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="7" height="18" rx="1"/><rect x="15" y="3" width="7" height="18" rx="1"/></svg>
+        </button>
+        <button class="btn" id="btn-fullscreen" title="Fullscreen">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="sim-frame">
+      <div class="placeholder" id="sim-placeholder">No booted simulator detected.</div>
+      <canvas id="sim-canvas" style="display:none"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen overlay -->
+<div class="fullscreen-overlay" id="fs-overlay">
+  <div class="fullscreen-toolbar">
+    <span>iOS Simulator</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="fs-sim-fps" style="color:#666;font-size:10px"></span>
+      <span class="quality-badge auto" id="fs-quality-badge" title="Click to cycle quality">AUTO</span>
+      <button class="btn" id="fs-btn-refocus">Refocus</button>
+      <button class="btn" id="fs-btn-home">Home</button>
+      <button class="btn" id="fs-btn-appswitcher">Apps</button>
+      <button class="btn" id="fs-btn-exit">Exit</button>
+    </div>
+  </div>
+  <div class="fullscreen-sim-frame" id="fs-sim-frame">
+    <canvas id="fs-sim-canvas"></canvas>
+  </div>
+</div>
+
+<!-- Launch simulator modal -->
+<div class="modal-backdrop" id="launch-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Launch Simulator</span>
+      <button class="close-btn" id="launch-modal-close">&times;</button>
+    </div>
+    <div class="modal-body" id="launch-modal-body">
+      <div class="modal-loading">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Build & Run modal -->
+<div class="modal-backdrop" id="build-modal">
+  <div class="modal" style="width:560px">
+    <div class="modal-header">
+      <span>Build & Run</span>
+      <button class="close-btn" id="build-modal-close">&times;</button>
+    </div>
+    <div class="modal-body" id="build-modal-body">
+      <div class="modal-loading">Scanning for Xcode projects...</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<script>
+(() => {
+  // ===================== TERMINAL =====================
+  const term = new Terminal({
+    cursorBlink: true, cursorStyle: "bar", fontSize: 13,
+    fontFamily: '"SF Mono", Menlo, Monaco, "Courier New", monospace',
+    allowProposedApi: true,
+    theme: { background: "#1a1a2e", foreground: "#e0e0e0", cursor: "#e94560", selectionBackground: "#533483" },
+  });
+  const fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  const termEl = document.getElementById("terminal-container");
+  term.open(termEl); fitAddon.fit(); term.focus();
+  termEl.addEventListener("click", () => term.focus());
+  document.getElementById("btn-kb").addEventListener("click", () => { term.blur(); document.activeElement?.blur(); });
+
+  const statusEl = document.getElementById("conn-status");
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+
+  function connectTerminal() {
+    const ws = new WebSocket(`${proto}//${location.host}/ws/terminal`);
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => { statusEl.textContent = "Connected"; statusEl.style.color = "#4ecca3"; sendResize(); term.focus(); };
+    ws.onmessage = (ev) => { if (typeof ev.data === "string") term.write(ev.data); else term.write(new Uint8Array(ev.data)); };
+    ws.onclose = () => {
+      statusEl.textContent = "Disconnected"; statusEl.style.color = "#e94560"; statusEl.style.cursor = "pointer";
+      statusEl.onclick = () => { statusEl.onclick = null; statusEl.style.cursor = ""; connectTerminal(); };
+      term.write("\r\n\x1b[31m[Disconnected]\x1b[0m\r\n");
+    };
+    term.onData((data) => { if (ws.readyState === 1) ws.send(data); });
+    function sendResize() { if (ws.readyState === 1) ws.send("\x01" + JSON.stringify({ cols: term.cols, rows: term.rows })); }
+    new ResizeObserver(() => { fitAddon.fit(); sendResize(); }).observe(termEl);
+  }
+  connectTerminal();
+
+  // ===================== BANDWIDTH PROBE + ADAPTIVE BITRATE =====================
+  const qBadge = document.getElementById("quality-badge");
+  const fsQBadge = document.getElementById("fs-quality-badge");
+  let measuredBwKbps = 0;
+  let videoWs = null; // reference to video websocket for sending bandwidth updates
+
+  async function probeBandwidth() {
+    // Download a known-size payload and measure speed
+    const probeSize = 200; // KB
+    try {
+      const start = performance.now();
+      const resp = await fetch(`/api/probe/${probeSize}?t=${Date.now()}`);
+      await resp.arrayBuffer();
+      const elapsed = (performance.now() - start) / 1000; // seconds
+      const bwKbps = Math.round((probeSize * 8) / elapsed); // kilobits per second
+      measuredBwKbps = bwKbps;
+      updateBwBadge();
+      // Tell the video stream server our bandwidth
+      if (videoWs && videoWs.readyState === 1) {
+        videoWs.send(JSON.stringify({ bandwidthKbps: bwKbps }));
+      }
+      return bwKbps;
+    } catch {
+      return 0;
+    }
+  }
+
+  function updateBwBadge() {
+    let label, cls;
+    if (measuredBwKbps <= 0) {
+      label = "Probing...";
+      cls = "quality-badge auto";
+    } else if (measuredBwKbps < 1000) {
+      label = `${measuredBwKbps} kbps`;
+      cls = "quality-badge manual"; // red = low
+    } else {
+      label = `${(measuredBwKbps / 1000).toFixed(1)} Mbps`;
+      cls = "quality-badge auto"; // green = good
+    }
+    qBadge.textContent = label; qBadge.className = cls;
+    fsQBadge.textContent = label; fsQBadge.className = cls;
+  }
+
+  // Re-probe on click
+  qBadge.addEventListener("click", probeBandwidth);
+  fsQBadge.addEventListener("click", probeBandwidth);
+
+  // Probe on load, then every 30s
+  probeBandwidth();
+  setInterval(probeBandwidth, 30000);
+
+  // ===================== SIMULATOR (H.264 MSE or JPEG Canvas) =====================
+  const inlineCanvas = document.getElementById("sim-canvas");
+  const inlineCtx = inlineCanvas.getContext("2d");
+  const fsCanvas = document.getElementById("fs-sim-canvas");
+  const fsCtx = fsCanvas.getContext("2d");
+  const placeholder = document.getElementById("sim-placeholder");
+  const fpsEl = document.getElementById("sim-fps");
+  const fsFpsEl = document.getElementById("fs-sim-fps");
+
+  let frameCount = 0, lastFpsTime = performance.now();
+  let currentFrameW = 360, currentFrameH = 780;
+  let isFullscreen = false;
+
+  function connectStream() {
+    const ws = new WebSocket(`${proto}//${location.host}/ws/video`);
+    ws.binaryType = "arraybuffer";
+    videoWs = ws;
+
+    ws.onopen = () => {
+      if (measuredBwKbps > 0) ws.send(JSON.stringify({ bandwidthKbps: measuredBwKbps }));
+      placeholder.style.display = "none";
+      inlineCanvas.style.display = "block";
+    };
+
+    // Each WS message = one JPEG frame. Render to canvas instantly. No buffering.
+    ws.onmessage = (ev) => {
+      const blob = new Blob([ev.data], { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        if (inlineCanvas.width !== img.width || inlineCanvas.height !== img.height) {
+          inlineCanvas.width = img.width; inlineCanvas.height = img.height;
+          currentFrameW = img.width; currentFrameH = img.height;
+        }
+        inlineCtx.drawImage(img, 0, 0);
+        if (isFullscreen) {
+          if (fsCanvas.width !== img.width || fsCanvas.height !== img.height) {
+            fsCanvas.width = img.width; fsCanvas.height = img.height;
+          }
+          fsCtx.drawImage(img, 0, 0);
+        }
+        URL.revokeObjectURL(url);
+        frameCount++;
+        const now = performance.now();
+        if (now - lastFpsTime >= 1000) {
+          fpsEl.textContent = `${frameCount} fps`; fsFpsEl.textContent = `${frameCount} fps`;
+          frameCount = 0; lastFpsTime = now;
+        }
+      };
+      img.src = url;
+    };
+
+    ws.onclose = () => { videoWs = null; setTimeout(connectStream, 2000); };
+  }
+
+  connectStream();
+
+  // ===================== TOUCH INPUT =====================
+  function sendTouch(action, body) {
+    fetch("/api/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...body }) }).catch(() => {});
+  }
+  function showRipple(container, cx, cy) {
+    const r = container.getBoundingClientRect();
+    const el = document.createElement("div"); el.className = "touch-ripple";
+    el.style.left = (cx - r.left) + "px"; el.style.top = (cy - r.top) + "px";
+    container.appendChild(el); setTimeout(() => el.remove(), 400);
+  }
+  function getCanvasNorm(el, cx, cy) {
+    const r = el.getBoundingClientRect();
+    // Works for both canvas and video elements
+    const elW = el.videoWidth || el.width || r.width;
+    const elH = el.videoHeight || el.height || r.height;
+    const ca = elW / elH, ra = r.width / r.height;
+    let ix, iy, iw, ih;
+    if (ca > ra) { iw = r.width; ih = r.width / ca; ix = 0; iy = (r.height - ih) / 2; }
+    else { ih = r.height; iw = r.height * ca; ix = (r.width - iw) / 2; iy = 0; }
+    const rx = cx - r.left - ix, ry = cy - r.top - iy;
+    return { x: Math.max(0, Math.min(1, rx / iw)), y: Math.max(0, Math.min(1, ry / ih)), valid: rx >= 0 && rx <= iw && ry >= 0 && ry <= ih };
+  }
+  function setupCanvasTouch(canvas, container) {
+    let ts = null, tsTime = 0;
+    canvas.addEventListener("click", (e) => {
+      if (!currentFrameW) return; const c = getCanvasNorm(canvas, e.clientX, e.clientY);
+      if (!c.valid) return; showRipple(container, e.clientX, e.clientY); sendTouch("tap", { x: c.x, y: c.y });
+    });
+    canvas.addEventListener("touchstart", (e) => { if (!currentFrameW) return; e.preventDefault(); const t = e.touches[0]; ts = getCanvasNorm(canvas, t.clientX, t.clientY); tsTime = Date.now(); }, { passive: false });
+    canvas.addEventListener("touchend", (e) => { if (!ts || !currentFrameW) return; e.preventDefault(); const t = e.changedTouches[0]; const end = getCanvasNorm(canvas, t.clientX, t.clientY);
+      const el = (Date.now() - tsTime) / 1000, dx = end.x - ts.x, dy = end.y - ts.y, dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist < 0.03) { showRipple(container, t.clientX, t.clientY); sendTouch("tap", { x: end.x, y: end.y }); }
+      else { sendTouch("swipe", { x1: ts.x, y1: ts.y, x2: end.x, y2: end.y, duration: Math.max(0.1, Math.min(el, 1.0)) }); }
+      ts = null;
+    }, { passive: false });
+  }
+  setupCanvasTouch(inlineCanvas, document.getElementById("sim-frame"));
+  setupCanvasTouch(fsCanvas, document.getElementById("fs-sim-frame"));
+
+  document.getElementById("btn-home").addEventListener("click", () => sendTouch("home", {}));
+  document.getElementById("fs-btn-home").addEventListener("click", () => sendTouch("home", {}));
+  document.getElementById("btn-appswitcher").addEventListener("click", () => sendTouch("appswitcher", {}));
+  document.getElementById("fs-btn-appswitcher").addEventListener("click", () => sendTouch("appswitcher", {}));
+
+  // ===================== REFOCUS =====================
+  function refocusSim() { fetch("/api/sim/refocus", { method: "POST" }).catch(() => {}); }
+  document.getElementById("btn-refocus").addEventListener("click", refocusSim);
+  document.getElementById("fs-btn-refocus").addEventListener("click", refocusSim);
+
+  // ===================== LAUNCH MODAL =====================
+  const launchModal = document.getElementById("launch-modal");
+  const launchBody = document.getElementById("launch-modal-body");
+  function openLaunchModal() {
+    launchModal.classList.add("active");
+    launchBody.innerHTML = '<div class="modal-loading">Loading simulators...</div>';
+    fetch("/api/sim/list").then(r => r.json()).then(devices => {
+      if (devices.error) { launchBody.innerHTML = `<div class="modal-loading">${devices.error}</div>`; return; }
+      launchBody.innerHTML = "";
+      for (const d of devices) {
+        const el = document.createElement("div"); el.className = "sim-item";
+        const isBooted = d.state === "Booted";
+        el.innerHTML = `<div><div class="sim-name">${d.name}</div><div class="sim-runtime">${d.runtime}</div></div><span class="sim-state ${isBooted ? "booted" : "shutdown"}">${d.state}</span>`;
+        el.addEventListener("click", () => {
+          const s = el.querySelector(".sim-state"); s.textContent = "Booting..."; s.className = "sim-state"; s.style.color = "#e94560";
+          fetch(`/api/sim/boot/${d.udid}`, { method: "POST" }).then(r => r.json()).then(data => {
+            if (data.ok) { s.textContent = "Booted"; s.className = "sim-state booted"; s.style.color = ""; setTimeout(() => { launchModal.classList.remove("active"); refocusSim(); }, 2000); }
+            else { s.textContent = data.error || "Error"; }
+          }).catch(() => { s.textContent = "Error"; });
+        });
+        launchBody.appendChild(el);
+      }
+    }).catch(() => { launchBody.innerHTML = '<div class="modal-loading">Failed to load</div>'; });
+  }
+  document.getElementById("btn-launch").addEventListener("click", openLaunchModal);
+  document.getElementById("launch-modal-close").addEventListener("click", () => launchModal.classList.remove("active"));
+  launchModal.addEventListener("click", (e) => { if (e.target === launchModal) launchModal.classList.remove("active"); });
+
+  // ===================== BUILD & RUN MODAL =====================
+  const buildModal = document.getElementById("build-modal");
+  const buildBody = document.getElementById("build-modal-body");
+
+  function openBuildModal() {
+    buildModal.classList.add("active");
+    buildBody.innerHTML = '<div class="modal-loading">Scanning for Xcode projects...</div>';
+    fetch("/api/xcode/projects").then(r => r.json()).then(projects => {
+      if (projects.error) { buildBody.innerHTML = `<div class="modal-loading">${projects.error}</div>`; return; }
+      if (projects.length === 0) { buildBody.innerHTML = '<div class="modal-loading">No Xcode projects found.<br><br>Place a .xcodeproj or .xcworkspace in your home directory.</div>'; return; }
+
+      buildBody.innerHTML = `
+        <div style="padding:8px">
+          <label style="font-size:12px;color:#888">Project</label>
+          <select class="build-select" id="build-project">${projects.map(p => `<option value="${p.path}">${p.name} (${p.type})</option>`).join("")}</select>
+          <label style="font-size:12px;color:#888;margin-top:8px;display:block">Scheme</label>
+          <select class="build-select" id="build-scheme"><option>Loading schemes...</option></select>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-green" id="build-run-btn" style="padding:8px 20px;font-size:13px" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Build & Run
+            </button>
+          </div>
+          <div class="build-log" id="build-log" style="display:none"></div>
+        </div>
+      `;
+
+      const projSelect = document.getElementById("build-project");
+      const schemeSelect = document.getElementById("build-scheme");
+      const buildBtn = document.getElementById("build-run-btn");
+      const buildLog = document.getElementById("build-log");
+
+      function loadSchemes() {
+        schemeSelect.innerHTML = '<option>Loading...</option>';
+        buildBtn.disabled = true;
+        fetch(`/api/xcode/schemes?path=${encodeURIComponent(projSelect.value)}`).then(r => r.json()).then(data => {
+          if (data.schemes && data.schemes.length) {
+            schemeSelect.innerHTML = data.schemes.map(s => `<option value="${s}">${s}</option>`).join("");
+            buildBtn.disabled = false;
+          } else {
+            schemeSelect.innerHTML = '<option>No schemes found</option>';
+          }
+        }).catch(() => { schemeSelect.innerHTML = '<option>Error loading schemes</option>'; });
+      }
+
+      projSelect.addEventListener("change", loadSchemes);
+      loadSchemes();
+
+      buildBtn.addEventListener("click", () => {
+        buildBtn.disabled = true;
+        buildBtn.textContent = "Building...";
+        buildLog.style.display = "block";
+        buildLog.innerHTML = "";
+
+        const evtSrc = new EventSource(
+          `/api/xcode/build?path=${encodeURIComponent(projSelect.value)}&scheme=${encodeURIComponent(schemeSelect.value)}`
+        );
+
+        evtSrc.onmessage = (ev) => {
+          const msg = JSON.parse(ev.data);
+          const span = document.createElement("span");
+          if (msg.type === "status") { span.className = "status"; span.textContent = msg.data + "\n"; }
+          else if (msg.type === "error") { span.className = "error"; span.textContent = msg.data + "\n"; }
+          else if (msg.type === "done") { span.className = "done"; span.textContent = msg.data + "\n"; }
+          else { span.textContent = msg.data; }
+          buildLog.appendChild(span);
+          buildLog.scrollTop = buildLog.scrollHeight;
+        };
+
+        evtSrc.onerror = () => {
+          evtSrc.close();
+          buildBtn.disabled = false;
+          buildBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Build & Run';
+        };
+      });
+    }).catch(() => { buildBody.innerHTML = '<div class="modal-loading">Failed to scan projects</div>'; });
+  }
+
+  document.getElementById("btn-build").addEventListener("click", openBuildModal);
+  document.getElementById("build-modal-close").addEventListener("click", () => buildModal.classList.remove("active"));
+  buildModal.addEventListener("click", (e) => { if (e.target === buildModal) buildModal.classList.remove("active"); });
+
+  // ===================== FULLSCREEN =====================
+  const fsOverlay = document.getElementById("fs-overlay");
+  function enterFullscreen() {
+    isFullscreen = true;
+    fsOverlay.classList.add("active");
+    // Copy current frame and size to fullscreen canvas
+    if (inlineCanvas.width > 0 && inlineCanvas.height > 0) {
+      fsCanvas.width = inlineCanvas.width;
+      fsCanvas.height = inlineCanvas.height;
+      fsCtx.drawImage(inlineCanvas, 0, 0);
+    }
+  }
+  function exitFullscreen() { isFullscreen = false; fsOverlay.classList.remove("active"); }
+  document.getElementById("btn-fullscreen").addEventListener("click", enterFullscreen);
+  document.getElementById("fs-btn-exit").addEventListener("click", exitFullscreen);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && isFullscreen) exitFullscreen(); });
+
+  // ===================== RESIZABLE DIVIDER =====================
+  const divider = document.getElementById("divider");
+  const panelSim = document.getElementById("panel-sim");
+  let dragging = false;
+  divider.addEventListener("mousedown", (e) => { dragging = true; divider.classList.add("active"); e.preventDefault(); });
+  document.addEventListener("mousemove", (e) => { if (!dragging) return; const r = document.querySelector(".container").getBoundingClientRect(); panelSim.style.flex = "none"; panelSim.style.width = Math.max(200, Math.min(r.right - e.clientX, r.width - 300)) + "px"; fitAddon.fit(); });
+  document.addEventListener("mouseup", () => { if (dragging) { dragging = false; divider.classList.remove("active"); } });
+})();
+</script>
+</body>
+</html>
