@@ -18,6 +18,47 @@ public class AppSystem
 	protected Logger log = new Logger( "AppSystem" );
 	internal CMaterialSystem2AppSystemDict _appSystem { get; set; }
 
+	/// <summary>
+	/// True when the process is running inside a Wine/CrossOver prefix.
+	/// Under Wine, OperatingSystem.IsWindows() returns true, but we may still
+	/// need to know the real host OS for data-directory paths, Vulkan/MoltenVK
+	/// configuration, and diagnostics.
+	/// </summary>
+	internal static bool IsRunningUnderWine { get; private set; }
+
+	/// <summary>
+	/// True when Wine is running on a macOS host (detected via SBOX_WINE_COMPAT
+	/// env var set by the launcher script, or WINEPREFIX + heuristics).
+	/// </summary>
+	internal static bool IsWineOnMacOS { get; private set; }
+
+	static AppSystem()
+	{
+		DetectWineEnvironment();
+	}
+
+	/// <summary>
+	/// Detect whether we are running under Wine and, if so, on which host OS.
+	/// This runs once at type-init so every other piece of code can check the
+	/// static properties without repeated env-var lookups.
+	/// </summary>
+	static void DetectWineEnvironment()
+	{
+		IsRunningUnderWine = Environment.GetEnvironmentVariable( "WINEPREFIX" ) != null
+			|| Environment.GetEnvironmentVariable( "WINE_PLATFORM" ) != null;
+
+		// The launcher script sets SBOX_WINE_COMPAT=1 on macOS.
+		// Alternatively, detect macOS host via WINEPREFIX path heuristic
+		// (macOS home directories are under /Users/).
+		if ( IsRunningUnderWine )
+		{
+			var wineCompat = Environment.GetEnvironmentVariable( "SBOX_WINE_COMPAT" );
+			var winePrefix = Environment.GetEnvironmentVariable( "WINEPREFIX" ) ?? "";
+			IsWineOnMacOS = wineCompat == "1"
+				|| winePrefix.StartsWith( "/Users/", StringComparison.Ordinal );
+		}
+	}
+
 	[DllImport( "user32.dll", CharSet = CharSet.Unicode )]
 	private static extern int MessageBox( IntPtr hWnd, string text, string caption, uint type );
 
@@ -31,7 +72,7 @@ public class AppSystem
 
 		// AVX is on any sane CPU since 2011
 		// Skip check when running under Wine/translation layer (e.g. macOS ARM64 via Rosetta)
-		if ( !Avx.IsSupported && Environment.GetEnvironmentVariable( "WINEPREFIX" ) == null )
+		if ( !Avx.IsSupported && !IsRunningUnderWine )
 		{
 			MessageBox( IntPtr.Zero, "Your CPU needs to support AVX instructions to run this game.", "Unsupported CPU", 0x10 );
 			Environment.Exit( 1 );
@@ -47,7 +88,13 @@ public class AppSystem
 	{
 		GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
-		if ( OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() )
+		if ( IsRunningUnderWine )
+			log.Info( $"Wine detected (macOS host: {IsWineOnMacOS})" );
+
+		// Set up platform-specific writable directories.
+		// When running natively on macOS/Linux, or under Wine on a macOS host,
+		// the install directory may be read-only.
+		if ( OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() || IsWineOnMacOS )
 			EnsurePlatformDirectories();
 
 		NetCore.InitializeInterop( Environment.CurrentDirectory );
@@ -63,14 +110,43 @@ public class AppSystem
 	/// </summary>
 	void EnsurePlatformDirectories()
 	{
+		// The launcher script may have already set SBOX_DATA_DIR for us.
+		var existingDataDir = Environment.GetEnvironmentVariable( "SBOX_DATA_DIR" );
+		if ( !string.IsNullOrEmpty( existingDataDir ) && Directory.Exists( existingDataDir ) )
+		{
+			log.Info( $"Platform data directory (from env): {existingDataDir}" );
+			return;
+		}
+
 		string dataHome;
 
-		if ( OperatingSystem.IsMacOS() )
+		if ( OperatingSystem.IsMacOS() || IsWineOnMacOS )
 		{
 			// ~/Library/Application Support/sbox
-			dataHome = Path.Combine(
-				Environment.GetFolderPath( Environment.SpecialFolder.UserProfile ),
-				"Library", "Application Support", "sbox" );
+			// Under Wine-on-macOS, resolve the real macOS home from WINEPREFIX path.
+			string home;
+			if ( IsWineOnMacOS )
+			{
+				var prefix = Environment.GetEnvironmentVariable( "WINEPREFIX" ) ?? "";
+				// WINEPREFIX is typically /Users/<name>/.wine-sbox
+				var usersIdx = prefix.IndexOf( "/Users/", StringComparison.Ordinal );
+				if ( usersIdx >= 0 )
+				{
+					var afterUsers = prefix.Substring( usersIdx + 7 ); // skip "/Users/"
+					var slash = afterUsers.IndexOf( '/' );
+					home = slash > 0 ? prefix.Substring( 0, usersIdx + 7 + slash ) : prefix;
+				}
+				else
+				{
+					home = Environment.GetFolderPath( Environment.SpecialFolder.UserProfile );
+				}
+			}
+			else
+			{
+				home = Environment.GetFolderPath( Environment.SpecialFolder.UserProfile );
+			}
+
+			dataHome = Path.Combine( home, "Library", "Application Support", "sbox" );
 		}
 		else
 		{
