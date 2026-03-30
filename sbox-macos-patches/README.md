@@ -28,6 +28,24 @@ string libName = OperatingSystem.IsWindows() ? "name.dll"
 ARM64 Macs running x86_64 via Rosetta don't have AVX instructions. Bypasses the check when `WINEPREFIX` env var is set.
 - `engine/Sandbox.AppSystem/AppSystem.cs`
 
+### 4. macOS folder access and platform directories (1 file)
+On macOS (and Linux) the install directory may be read-only. `EnsurePlatformDirectories()` creates writable storage:
+- **macOS**: `~/Library/Application Support/sbox/{config,data,cache,addons,logs}`
+- **Linux**: `$XDG_DATA_HOME/sbox/` (defaults to `~/.local/share/sbox/`)
+- Sets `SBOX_DATA_DIR` environment variable for native engine discovery.
+- `engine/Sandbox.AppSystem/AppSystem.cs`
+
+### 5. Cross-platform Steam library loading (1 file)
+`LoadSteamDll()` was Windows-only with hardcoded backslash paths. Now loads the correct library per platform:
+- **Windows**: `bin/win64/steam_api64.dll`
+- **macOS**: `bin/osx64/libsteam_api.dylib` (falls back to Wine layout)
+- **Linux**: `bin/linux64/libsteam_api.so`
+- `engine/Sandbox.AppSystem/AppSystem.cs`
+
+### 6. Platform-aware command line handling (1 file)
+The `.dll` → `.exe` entry point name rewrite in `InitGame()` is now Windows-only. On macOS/Linux the `.dll` name is passed through unchanged.
+- `engine/Sandbox.AppSystem/AppSystem.cs`
+
 ## Prerequisites
 - macOS with Apple Silicon (ARM64)
 - .NET 10 SDK: `brew install dotnet-sdk`

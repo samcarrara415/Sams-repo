@@ -5,6 +5,7 @@ using Sandbox.Network;
 using Sandbox.Rendering;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime;
 using System.Runtime.InteropServices;
@@ -45,7 +46,54 @@ public class AppSystem
 	public virtual void Init()
 	{
 		GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+
+		if ( OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() )
+			EnsurePlatformDirectories();
+
 		NetCore.InitializeInterop( Environment.CurrentDirectory );
+	}
+
+	/// <summary>
+	/// On macOS (and Linux) the engine needs writable directories for config, cache, and
+	/// downloaded content. The Windows build stores these alongside the executable, but on
+	/// Unix-like systems the install directory may be read-only. This method creates the
+	/// platform-appropriate folders under ~/Library/Application Support (macOS) or
+	/// ~/.local/share (Linux, via XDG_DATA_HOME) and sets environment variables so the
+	/// native engine and managed code can find them.
+	/// </summary>
+	void EnsurePlatformDirectories()
+	{
+		string dataHome;
+
+		if ( OperatingSystem.IsMacOS() )
+		{
+			// ~/Library/Application Support/sbox
+			dataHome = Path.Combine(
+				Environment.GetFolderPath( Environment.SpecialFolder.UserProfile ),
+				"Library", "Application Support", "sbox" );
+		}
+		else
+		{
+			// Linux: respect XDG_DATA_HOME, default ~/.local/share/sbox
+			var xdg = Environment.GetEnvironmentVariable( "XDG_DATA_HOME" );
+			if ( string.IsNullOrEmpty( xdg ) )
+				xdg = Path.Combine( Environment.GetFolderPath( Environment.SpecialFolder.UserProfile ), ".local", "share" );
+			dataHome = Path.Combine( xdg, "sbox" );
+		}
+
+		// Ensure required subdirectories exist
+		string[] subDirs = { "config", "data", "cache", "addons", "logs" };
+		foreach ( var sub in subDirs )
+		{
+			Directory.CreateDirectory( Path.Combine( dataHome, sub ) );
+		}
+
+		// Expose the root to the rest of the engine via an environment variable.
+		// The native engine and managed filesystem code can read SBOX_DATA_DIR to
+		// locate user-writable storage.
+		Environment.SetEnvironmentVariable( "SBOX_DATA_DIR", dataHome );
+
+		log.Info( $"Platform data directory: {dataHome}" );
 	}
 
 	void SetupEnvironment()
@@ -315,7 +363,9 @@ public class AppSystem
 	protected void InitGame( AppSystemCreateInfo createInfo, string commandLine = null )
 	{
 		commandLine ??= System.Environment.CommandLine;
-		commandLine = commandLine.Replace( ".dll", ".exe" ); // uck
+		// On Windows the engine expects an .exe entry point name
+		if ( OperatingSystem.IsWindows() )
+			commandLine = commandLine.Replace( ".dll", ".exe" ); // uck
 
 		_appSystem = CMaterialSystem2AppSystemDict.Create( createInfo.ToMaterialSystem2AppSystemDictCreateInfo() );
 
@@ -376,13 +426,28 @@ public class AppSystem
 	/// </summary>
 	protected void LoadSteamDll()
 	{
-		if ( !OperatingSystem.IsWindows() )
-			return;
+		string steamLibPath;
 
-		var dllName = $"{Environment.CurrentDirectory}\\bin\\win64\\steam_api64.dll";
-		if ( !NativeLibrary.TryLoad( dllName, out steamApiDll ) )
+		if ( OperatingSystem.IsWindows() )
 		{
-			throw new System.Exception( "Couldn't load bin/win64/steam_api64.dll" );
+			steamLibPath = System.IO.Path.Combine( Environment.CurrentDirectory, "bin", "win64", "steam_api64.dll" );
+		}
+		else if ( OperatingSystem.IsMacOS() )
+		{
+			steamLibPath = System.IO.Path.Combine( Environment.CurrentDirectory, "bin", "osx64", "libsteam_api.dylib" );
+
+			// Fallback: Wine/CrossOver prefix may keep the Windows layout
+			if ( !System.IO.File.Exists( steamLibPath ) )
+				steamLibPath = System.IO.Path.Combine( Environment.CurrentDirectory, "bin", "win64", "steam_api64.dll" );
+		}
+		else
+		{
+			steamLibPath = System.IO.Path.Combine( Environment.CurrentDirectory, "bin", "linux64", "libsteam_api.so" );
+		}
+
+		if ( !NativeLibrary.TryLoad( steamLibPath, out steamApiDll ) )
+		{
+			throw new System.Exception( $"Couldn't load Steam library: {steamLibPath}" );
 		}
 	}
 }
