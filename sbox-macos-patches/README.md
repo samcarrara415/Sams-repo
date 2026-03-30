@@ -1,131 +1,141 @@
-# s&box macOS Build Patches
+# s&box for macOS (Apple Silicon)
 
-Patches to build and run Facepunch s&box engine on macOS ARM64 (Apple Silicon).
+Run [Facepunch s&box](https://sbox.game) on macOS ARM64 via a Wine compatibility layer.
 
-## What these patches do
+## Install
 
-### 1. Cross-platform path fixes (3 files)
-Windows-style path separators (`\`) replaced with `Path.Combine()` for macOS/Linux compatibility.
-- `engine/Sandbox.Compiling.Test/Tests/CodeGen.cs`
-- `engine/Sandbox.Compiling.Test/Tests/BlacklistTest.cs`
-- `engine/Sandbox.Compiling.Test/Tests/Razor.cs`
-
-### 2. Platform-aware native library loading (6 files)
-Generated interop files had hardcoded `.dylib` extensions. Changed to runtime platform detection:
-```csharp
-string libName = OperatingSystem.IsWindows() ? "name.dll"
-    : OperatingSystem.IsMacOS() ? "libname.dylib"
-    : "libname.so";
+```bash
+git clone https://github.com/samcarrara415/Sams-repo.git
+cd Sams-repo/sbox-macos-patches
+./install.sh
 ```
-- `engine/Sandbox.Engine/Interop.Engine.cs` (engine2)
-- `engine/Sandbox.Tools/Interop.Tools.cs` (toolframework2)
-- `engine/Sandbox.Tools/Interop.Animgraph.cs` (animgraph_editor)
-- `engine/Sandbox.Tools/Interop.AssetSystem.cs` (assetsystem)
-- `engine/Sandbox.Tools/Interop.ModelDoc.cs` (modeldoc_editor)
-- `engine/Sandbox.Tools/Interop.Hammer.cs` (hammer)
 
-### 3. Wine environment detection (1 file)
-Static `IsRunningUnderWine` and `IsWineOnMacOS` properties on `AppSystem` detect the Wine compatibility layer at startup. Under Wine `OperatingSystem.IsWindows()` returns true, so these properties let the engine know the real host OS for data paths, Vulkan config, and diagnostics.
-- `engine/Sandbox.AppSystem/AppSystem.cs`
+That's it. The installer will:
+1. Check and install prerequisites (Homebrew, .NET SDK, Wine CrossOver)
+2. Clone `sbox-public` from Facepunch
+3. Apply all macOS patches
+4. Build the engine
+5. Set up a Wine prefix with the Windows .NET 10 runtime
 
-### 4. AVX check bypass for Wine/Rosetta (1 file)
-ARM64 Macs running x86_64 via Rosetta don't have AVX instructions. Bypasses the check when running under Wine.
-- `engine/Sandbox.AppSystem/AppSystem.cs`
+## Run
 
-### 5. macOS folder access and platform directories (1 file)
-On macOS (and Linux) the install directory may be read-only. `EnsurePlatformDirectories()` creates writable storage:
-- **macOS (native)**: `~/Library/Application Support/sbox/{config,data,cache,addons,logs}`
-- **macOS (via Wine)**: Same path, resolved from `WINEPREFIX` or `SBOX_DATA_DIR` env var
-- **Linux**: `$XDG_DATA_HOME/sbox/` (defaults to `~/.local/share/sbox/`)
-- Sets `SBOX_DATA_DIR` environment variable for native engine discovery.
-- `engine/Sandbox.AppSystem/AppSystem.cs`
+```bash
+./sbox-wine-launcher.sh              # game client
+./sbox-wine-launcher.sh --server     # dedicated server
+./sbox-wine-launcher.sh --editor     # editor (experimental)
+```
 
-### 6. Cross-platform Steam library loading (1 file)
-`LoadSteamDll()` was Windows-only with hardcoded backslash paths. Now loads the correct library per platform:
-- **Windows**: `bin/win64/steam_api64.dll`
-- **macOS**: `bin/osx64/libsteam_api.dylib` (falls back to Wine layout)
-- **Linux**: `bin/linux64/libsteam_api.so`
-- `engine/Sandbox.AppSystem/AppSystem.cs`
+Or use `make`:
 
-### 7. Platform-aware command line handling (1 file)
-The `.dll` → `.exe` entry point name rewrite in `InitGame()` is now Windows-only. On macOS/Linux the `.dll` name is passed through unchanged.
-- `engine/Sandbox.AppSystem/AppSystem.cs`
+```bash
+make run        # game client
+make server     # dedicated server
+make editor     # editor (experimental)
+make test       # unit tests (native macOS)
+```
 
 ## Prerequisites
-- macOS with Apple Silicon (ARM64)
-- .NET 10 SDK: `brew install dotnet-sdk`
-- Wine CrossOver: `brew install gcenx/wine/wine-crossover`
-- Windows .NET 10 runtime (zip) extracted to `~/.wine-sbox/drive_c/dotnet/`
 
-## Quick start (Wine compatibility layer)
+Installed automatically by `./install.sh`, or install manually:
 
-### One-time setup
-```bash
-./sbox-wine-setup.sh
-```
-This installs Wine (if needed), creates the Wine prefix, downloads the Windows .NET runtime, and configures DLL overrides.
+| Tool | Install | Purpose |
+|------|---------|---------|
+| Homebrew | [brew.sh](https://brew.sh) | Package manager |
+| .NET 10 SDK | `brew install dotnet-sdk` | Build the engine |
+| Wine CrossOver | `brew install gcenx/wine/wine-crossover` | Run Windows binaries |
+| MoltenVK | `brew install molten-vk` | Vulkan on macOS (optional) |
 
-### Run via Wine
-```bash
-./sbox-wine-launcher.sh                  # game client
-./sbox-wine-launcher.sh --server         # dedicated server
-./sbox-wine-launcher.sh --editor         # editor (experimental)
-./sbox-wine-launcher.sh --test           # unit tests
-```
+## What the patches do
 
-The launcher script handles all Wine environment configuration including:
-- `WINEPREFIX`, `WINEARCH`, `WINEDEBUG` setup
-- CLR deadlock mitigations (`WINEESYNC`, `WINEFSYNC`, thread pool tuning)
-- Mono disabled in favor of real .NET runtime
-- MoltenVK / Vulkan configuration for macOS
-- `SBOX_WINE_COMPAT=1` flag for engine-side Wine-on-macOS detection
+| # | Patch | Files |
+|---|-------|-------|
+| 1 | Cross-platform path separators (`\` → `Path.Combine()`) | 3 test files |
+| 2 | Platform-aware native library loading (`.dll` / `.dylib` / `.so`) | 6 interop files |
+| 3 | Wine environment detection (`IsRunningUnderWine`, `IsWineOnMacOS`) | AppSystem.cs |
+| 4 | AVX instruction check bypass under Wine/Rosetta | AppSystem.cs |
+| 5 | macOS folder access (`~/Library/Application Support/sbox/`) | AppSystem.cs |
+| 6 | Cross-platform Steam library loading | AppSystem.cs |
+| 7 | Platform-aware `.dll`→`.exe` command line rewrite | AppSystem.cs |
 
-### Build (native macOS)
-```bash
-git clone https://github.com/Facepunch/sbox-public.git
-cd sbox-public
-# Apply patches, then:
-dotnet run --project ./engine/Tools/SboxBuild/SboxBuild.csproj -- build --config Developer
-```
+## Wine compatibility layer
 
-### Run dedicated server (via Wine, manual)
-```bash
-WINEPREFIX=~/.wine-sbox WINEDEBUG=-all wine64 C:\\dotnet\\dotnet.exe exec C:\\sbox\\sbox-server.dll
-```
+The launcher script (`sbox-wine-launcher.sh`) configures Wine with these CLR deadlock mitigations:
 
-### Run tests (native macOS)
-```bash
-dotnet test engine/Sandbox.Compiling.Test/bin/Release/net10.0/Sandbox.Compiling.Test.dll
-dotnet test engine/Sandbox.Hotload.Test/bin/Release/net10.0/Sandbox.Hotload.Test.dll
-```
+- **esync / fsync** — Reduces lock contention during CLR startup
+- **Mono disabled** — Uses real .NET runtime instead of Wine Mono
+- **CLR diagnostics disabled** — Avoids diagnostic pipe hang under Wine
+- **Tiered compilation disabled** — Prevents JIT threading issues at startup
+- **Thread pool tuning** — Forces minimum worker threads for editor mode
+- **MoltenVK configured** — Vulkan-on-Metal for macOS rendering
 
 ## Status
-- **Managed build**: Fully working (0 errors, 0 warnings)
-- **Unit tests**: 229/240 pass natively on macOS
-- **Dedicated server**: Running via Wine
-- **Game client**: Running via Wine compatibility layer
-- **Editor GUI**: Experimental via Wine — may deadlock on CLR startup with older Wine versions. Try `WINEESYNC=0 WINEFSYNC=0` if it hangs. Fully stable with Wine 9+ or native macOS engine2 binary from Facepunch.
+
+| Component | Status |
+|-----------|--------|
+| Managed build | 0 errors, 0 warnings |
+| Unit tests | 229/240 pass (native macOS) |
+| Dedicated server | Working (Wine) |
+| Game client | Working (Wine) |
+| Editor GUI | Experimental (may hang on Wine < 9) |
 
 ## Troubleshooting
 
 ### Editor hangs at startup
+
 The .NET CLR can deadlock with Wine's `loader_section` lock. Try:
+
 ```bash
 WINEESYNC=0 WINEFSYNC=0 ./sbox-wine-launcher.sh --editor
 ```
-If that still hangs, you need Wine 9+ or a native macOS engine2 binary from Facepunch.
+
+If that doesn't help, you need Wine 9+ (`brew upgrade wine-crossover`).
 
 ### Vulkan / rendering issues
-macOS requires MoltenVK for Vulkan support. The launcher sets `MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE=1` automatically. If you see rendering artifacts, ensure MoltenVK is installed:
+
+Install MoltenVK for Vulkan support on macOS:
+
 ```bash
 brew install molten-vk
 ```
 
-### Steam library not found
-Ensure `steam_api64.dll` is in `sbox-public/bin/win64/` (Windows layout for Wine), or `libsteam_api.dylib` in `bin/osx64/` (native macOS).
+### Build fails after source update
 
-## Patch file
-`sbox-macos-crossplatform.patch` can be applied with:
+Re-apply patches after pulling new source:
+
 ```bash
-cd sbox-public && git apply ../sbox-macos-crossplatform.patch
+cd sbox-public
+git checkout -- .
+cd ..
+./install.sh
+```
+
+### Custom paths
+
+```bash
+SBOX_DIR=/path/to/sbox-public WINEPREFIX=~/.my-wine ./install.sh
+```
+
+## Uninstall
+
+```bash
+make uninstall
+```
+
+Removes the `sbox-public` checkout and Wine prefix.
+
+## File structure
+
+```
+sbox-macos-patches/
+├── install.sh                   # one-command installer
+├── Makefile                     # make build / run / test / etc.
+├── sbox-wine-setup.sh           # Wine prefix setup
+├── sbox-wine-launcher.sh        # Wine launch wrapper
+├── sbox-macos-crossplatform.patch  # git-apply patch
+├── engine/                      # patched source files
+│   ├── Sandbox.AppSystem/
+│   ├── Sandbox.Engine/
+│   ├── Sandbox.Tools/
+│   └── Sandbox.Compiling.Test/
+└── README.md
 ```
