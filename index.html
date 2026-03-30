@@ -429,16 +429,34 @@
             return 0;
         }
 
+        function generateRandomData(size) {
+            const data = new Uint8Array(size);
+            // crypto.getRandomValues has a 65536 byte limit, so chunk it
+            const chunkSize = 65536;
+            for (let offset = 0; offset < size; offset += chunkSize) {
+                const length = Math.min(chunkSize, size - offset);
+                const chunk = new Uint8Array(length);
+                if (window.crypto && window.crypto.getRandomValues) {
+                    window.crypto.getRandomValues(chunk);
+                } else {
+                    for (let j = 0; j < length; j++) {
+                        chunk[j] = Math.floor(Math.random() * 256);
+                    }
+                }
+                data.set(chunk, offset);
+            }
+            return data;
+        }
+
         async function measureUploadSpeed() {
-            // Since we can't actually upload to GitHub Pages,
-            // we simulate upload by measuring data processing speed
-            // and sending data to a test endpoint
+            // Upload to httpbin.org which accepts POST data
+            const uploadUrl = 'https://httpbin.org/post';
 
             const testDataSizes = [
-                100000, 200000, 500000, 1000000,
-                100000, 200000, 500000, 1000000,
-                200000, 500000, 1000000, 2000000
-            ]; // bytes - multiple rounds with increasing sizes
+                50000, 100000, 200000, 400000,
+                50000, 100000, 200000, 400000,
+                100000, 200000, 400000, 500000
+            ]; // bytes - multiple rounds
             let totalBytes = 0;
             let totalTime = 0;
 
@@ -448,52 +466,34 @@
                 setProgress(55 + (i / testDataSizes.length) * 40);
 
                 const size = testDataSizes[i];
-                const data = new Uint8Array(size);
-
-                // Fill with random data using crypto for speed
-                if (window.crypto && window.crypto.getRandomValues) {
-                    window.crypto.getRandomValues(data);
-                } else {
-                    for (let j = 0; j < size; j++) {
-                        data[j] = Math.floor(Math.random() * 256);
-                    }
-                }
-
+                const data = generateRandomData(size);
                 const blob = new Blob([data]);
+
                 const start = performance.now();
 
-                // Simulate upload by encoding to base64 and computing checksum
-                const reader = new FileReader();
-                await new Promise((resolve) => {
-                    reader.onload = async () => {
-                        const base64 = reader.result;
-                        // Compute a simple checksum to simulate upload verification
-                        let checksum = 0;
-                        for (let k = 0; k < Math.min(base64.length, 10000); k++) {
-                            checksum = (checksum + base64.charCodeAt(k)) % 65536;
-                        }
-                        // Simulate network latency proportional to data size
-                        await new Promise(r => setTimeout(r, size / 100000 * 50));
-                        resolve();
-                    };
-                    reader.readAsDataURL(blob);
-                });
+                try {
+                    await fetch(uploadUrl, {
+                        method: 'POST',
+                        body: blob,
+                        mode: 'cors'
+                    });
+                    const end = performance.now();
+                    const timeSeconds = (end - start) / 1000;
 
-                const end = performance.now();
-                const timeSeconds = (end - start) / 1000;
+                    totalBytes += size;
+                    totalTime += timeSeconds;
 
-                totalBytes += size;
-                totalTime += timeSeconds;
-
-                // Calculate running speed (simulated)
-                const speedMbps = (totalBytes * 8) / (totalTime * 1000000);
-                updateGauge(speedMbps);
-                uploadSpeedEl.textContent = speedMbps.toFixed(1);
+                    // Calculate running speed
+                    const speedMbps = (totalBytes * 8) / (totalTime * 1000000);
+                    updateGauge(speedMbps);
+                    uploadSpeedEl.textContent = speedMbps.toFixed(1);
+                } catch (e) {
+                    console.log('Upload test error:', e);
+                }
             }
 
             if (totalTime > 0) {
-                // Scale to approximate real upload speed
-                return (totalBytes * 8) / (totalTime * 1000000) * 1.2;
+                return (totalBytes * 8) / (totalTime * 1000000); // Mbps
             }
             return 0;
         }
