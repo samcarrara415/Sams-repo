@@ -522,15 +522,21 @@
                 downloadSpeedEl.textContent = downloadSpeed.toFixed(1);
                 setProgress(55);
 
+                // Clear transition between download and upload
+                setStatus('Download complete! Starting upload test...');
+                updateGauge(0);
+                await new Promise(r => setTimeout(r, 1500));
+
                 // Upload test (12 operations ~10-15 seconds)
                 const uploadSpeed = await measureUploadSpeed();
                 uploadSpeedEl.textContent = uploadSpeed.toFixed(1);
                 setProgress(100);
 
-                // Show final download speed on gauge
+                // Show final results
+                setStatus('Test complete! Your connection is ready.');
+                await new Promise(r => setTimeout(r, 500));
                 updateGauge(downloadSpeed);
 
-                setStatus('Test complete! Your connection is ready.');
             } catch (error) {
                 console.error('Speed test error:', error);
                 setStatus('Test encountered an error. Please try again.');
