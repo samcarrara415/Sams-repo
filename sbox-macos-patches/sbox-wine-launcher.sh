@@ -94,7 +94,15 @@ if [[ -z "${MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS:-}" ]]; then
     export MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=2
 fi
 
-# 7. Tell the managed engine it's running under Wine on macOS.
+# 7. CLR diagnostics pipe can cause hangs under Wine. Disable it.
+export COMPlus_EnableDiagnostics="${COMPlus_EnableDiagnostics:-0}"
+export DOTNET_EnableDiagnostics="${DOTNET_EnableDiagnostics:-0}"
+
+# 8. Disable tiered compilation to avoid JIT threading issues at startup.
+export COMPlus_TieredCompilation="${COMPlus_TieredCompilation:-0}"
+export DOTNET_TieredCompilation="${DOTNET_TieredCompilation:-0}"
+
+# 9. Tell the managed engine it's running under Wine on macOS.
 #    The patched AppSystem.cs reads this to select correct code paths.
 export SBOX_WINE_COMPAT=1
 
