@@ -284,8 +284,8 @@
         <p class="status" id="status">Click the button to begin the speed test</p>
 
         <div class="info">
-            <p>This comprehensive speed test runs multiple rounds of downloads and uploads to provide accurate results.
-            The test takes approximately 30-45 seconds. Results may vary based on network conditions, server load, and your ISP.</p>
+            <p>This speed test uses Cloudflare's global network with 8 parallel connections for download and 4 for upload.
+            Each phase runs for 10 seconds to accurately measure your connection speed up to 1 Gbps.</p>
         </div>
     </div>
 
@@ -299,34 +299,28 @@
         const gaugeFill = document.getElementById('gaugeFill');
         const gaugeValue = document.getElementById('gaugeValue');
 
-        // Test endpoints - using public CDNs for download test (larger files for longer test)
+        // Large test files for accurate speed measurement
         const testUrls = [
-            'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.4/axios.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.2/d3.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js'
+            'https://speed.cloudflare.com/__down?bytes=10000000',  // 10MB chunks from Cloudflare
+            'https://speed.cloudflare.com/__down?bytes=10000000',
+            'https://speed.cloudflare.com/__down?bytes=10000000',
+            'https://speed.cloudflare.com/__down?bytes=10000000',
+            'https://speed.cloudflare.com/__down?bytes=25000000',  // 25MB chunks
+            'https://speed.cloudflare.com/__down?bytes=25000000',
+            'https://speed.cloudflare.com/__down?bytes=25000000',
+            'https://speed.cloudflare.com/__down?bytes=25000000'
         ];
 
-        const testRounds = 3; // Number of rounds to run the download test
+        const parallelConnections = 8; // Number of simultaneous downloads
+        const testDuration = 10000; // Run download test for 10 seconds
 
         function updateGauge(speed) {
-            const maxSpeed = 100; // Max display speed in Mbps
+            const maxSpeed = 1000; // Max display speed in Mbps (gigabit)
             const percentage = Math.min(speed / maxSpeed, 1);
             const arcLength = 251;
             const offset = arcLength * (1 - percentage);
             gaugeFill.style.strokeDashoffset = offset;
-            gaugeValue.textContent = speed.toFixed(1);
+            gaugeValue.textContent = speed.toFixed(0);
         }
 
         function setProgress(percent) {
@@ -339,40 +333,27 @@
 
         async function measureLatency() {
             const measurements = [];
-            const pingCount = 10; // More pings for better accuracy
+            const pingCount = 20; // More pings for accuracy
+            const pingUrl = 'https://speed.cloudflare.com/__down?bytes=0';
 
             for (let i = 0; i < pingCount; i++) {
                 setStatus(`Testing latency... (${i + 1}/${pingCount})`);
                 setProgress(2 + (i / pingCount) * 10);
 
-                const testUrl = testUrls[i % testUrls.length] + '?t=' + Date.now() + Math.random();
                 const start = performance.now();
                 try {
-                    await fetch(testUrl, {
-                        method: 'HEAD',
+                    await fetch(pingUrl + '&r=' + Math.random(), {
                         cache: 'no-store',
                         mode: 'cors'
                     });
                     const end = performance.now();
-                    measurements.push(end - start);
-                    latencyEl.textContent = Math.round(end - start);
+                    const ping = end - start;
+                    measurements.push(ping);
+                    latencyEl.textContent = Math.round(ping);
                 } catch (e) {
-                    // If HEAD fails, try with GET
-                    try {
-                        const start2 = performance.now();
-                        await fetch(testUrl + '&r=' + Math.random(), {
-                            cache: 'no-store',
-                            mode: 'cors'
-                        });
-                        const end2 = performance.now();
-                        measurements.push(end2 - start2);
-                        latencyEl.textContent = Math.round(end2 - start2);
-                    } catch (e2) {
-                        console.log('Latency measurement failed:', e2);
-                    }
+                    console.log('Latency measurement failed:', e);
                 }
-                // Small delay between pings
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 100));
             }
 
             if (measurements.length > 0) {
@@ -385,19 +366,18 @@
 
         async function measureDownloadSpeed() {
             let totalBytes = 0;
-            let totalTime = 0;
-            const totalOperations = testUrls.length * testRounds;
-            let currentOp = 0;
+            const startTime = performance.now();
+            let running = true;
+            let activeDownloads = 0;
+            let completedDownloads = 0;
 
-            for (let round = 0; round < testRounds; round++) {
-                setStatus(`Testing download speed... (Round ${round + 1}/${testRounds})`);
+            // Stop after testDuration milliseconds
+            setTimeout(() => { running = false; }, testDuration);
 
-                for (let i = 0; i < testUrls.length; i++) {
-                    currentOp++;
-                    setProgress(15 + (currentOp / totalOperations) * 40);
-
-                    const url = testUrls[i] + '?cache=' + Date.now() + Math.random();
-                    const start = performance.now();
+            async function downloadChunk() {
+                while (running) {
+                    const url = testUrls[completedDownloads % testUrls.length] + '&r=' + Math.random() + Date.now();
+                    activeDownloads++;
 
                     try {
                         const response = await fetch(url, {
@@ -405,25 +385,36 @@
                             mode: 'cors'
                         });
                         const data = await response.arrayBuffer();
-                        const end = performance.now();
+                        totalBytes += data.byteLength;
+                        completedDownloads++;
 
-                        const bytes = data.byteLength;
-                        const timeSeconds = (end - start) / 1000;
-
-                        totalBytes += bytes;
-                        totalTime += timeSeconds;
-
-                        // Calculate running speed
-                        const speedMbps = (totalBytes * 8) / (totalTime * 1000000);
+                        // Update display
+                        const elapsed = (performance.now() - startTime) / 1000;
+                        const speedMbps = (totalBytes * 8) / (elapsed * 1000000);
                         updateGauge(speedMbps);
-                        downloadSpeedEl.textContent = speedMbps.toFixed(1);
+                        downloadSpeedEl.textContent = speedMbps.toFixed(0);
+
+                        const progress = Math.min((elapsed / (testDuration / 1000)) * 40, 40);
+                        setProgress(15 + progress);
+                        setStatus(`Testing download speed... ${elapsed.toFixed(1)}s`);
                     } catch (e) {
-                        console.log('Download test error:', e);
+                        console.log('Download error:', e);
                     }
+                    activeDownloads--;
                 }
             }
 
-            if (totalTime > 0) {
+            // Start parallel downloads
+            const workers = [];
+            for (let i = 0; i < parallelConnections; i++) {
+                workers.push(downloadChunk());
+            }
+
+            // Wait for all workers to finish
+            await Promise.all(workers);
+
+            const totalTime = (performance.now() - startTime) / 1000;
+            if (totalTime > 0 && totalBytes > 0) {
                 return (totalBytes * 8) / (totalTime * 1000000); // Mbps
             }
             return 0;
@@ -449,50 +440,57 @@
         }
 
         async function measureUploadSpeed() {
-            // Upload to httpbin.org which accepts POST data
-            const uploadUrl = 'https://httpbin.org/post';
+            const uploadUrl = 'https://speed.cloudflare.com/__up';
+            const chunkSize = 2000000; // 2MB chunks for upload
+            const uploadDuration = 10000; // 10 seconds
 
-            const testDataSizes = [
-                50000, 100000, 200000, 400000,
-                50000, 100000, 200000, 400000,
-                100000, 200000, 400000, 500000
-            ]; // bytes - multiple rounds
             let totalBytes = 0;
-            let totalTime = 0;
+            const startTime = performance.now();
+            let running = true;
+            let completedUploads = 0;
 
-            for (let i = 0; i < testDataSizes.length; i++) {
-                const round = Math.floor(i / 4) + 1;
-                setStatus(`Testing upload speed... (Round ${round}/3)`);
-                setProgress(55 + (i / testDataSizes.length) * 40);
+            setTimeout(() => { running = false; }, uploadDuration);
 
-                const size = testDataSizes[i];
-                const data = generateRandomData(size);
-                const blob = new Blob([data]);
+            async function uploadChunk() {
+                while (running) {
+                    const data = generateRandomData(chunkSize);
+                    const blob = new Blob([data]);
 
-                const start = performance.now();
+                    try {
+                        await fetch(uploadUrl, {
+                            method: 'POST',
+                            body: blob,
+                            mode: 'cors'
+                        });
+                        totalBytes += chunkSize;
+                        completedUploads++;
 
-                try {
-                    await fetch(uploadUrl, {
-                        method: 'POST',
-                        body: blob,
-                        mode: 'cors'
-                    });
-                    const end = performance.now();
-                    const timeSeconds = (end - start) / 1000;
+                        // Update display
+                        const elapsed = (performance.now() - startTime) / 1000;
+                        const speedMbps = (totalBytes * 8) / (elapsed * 1000000);
+                        updateGauge(speedMbps);
+                        uploadSpeedEl.textContent = speedMbps.toFixed(0);
 
-                    totalBytes += size;
-                    totalTime += timeSeconds;
-
-                    // Calculate running speed
-                    const speedMbps = (totalBytes * 8) / (totalTime * 1000000);
-                    updateGauge(speedMbps);
-                    uploadSpeedEl.textContent = speedMbps.toFixed(1);
-                } catch (e) {
-                    console.log('Upload test error:', e);
+                        const progress = Math.min((elapsed / (uploadDuration / 1000)) * 40, 40);
+                        setProgress(55 + progress);
+                        setStatus(`Testing upload speed... ${elapsed.toFixed(1)}s`);
+                    } catch (e) {
+                        console.log('Upload error:', e);
+                        // If Cloudflare fails, the test will just show lower speed
+                    }
                 }
             }
 
-            if (totalTime > 0) {
+            // Start parallel uploads (fewer than download due to overhead)
+            const workers = [];
+            for (let i = 0; i < 4; i++) {
+                workers.push(uploadChunk());
+            }
+
+            await Promise.all(workers);
+
+            const totalTime = (performance.now() - startTime) / 1000;
+            if (totalTime > 0 && totalBytes > 0) {
                 return (totalBytes * 8) / (totalTime * 1000000); // Mbps
             }
             return 0;
