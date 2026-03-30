@@ -1,0 +1,71 @@
+diff --git a/engine/Sandbox.AppSystem/AppSystem.cs b/engine/Sandbox.AppSystem/AppSystem.cs
+index a4a2f0c6..d3038a15 100644
+--- a/engine/Sandbox.AppSystem/AppSystem.cs
++++ b/engine/Sandbox.AppSystem/AppSystem.cs
+@@ -29,7 +29,8 @@ public class AppSystem
+ 			return;
+ 
+ 		// AVX is on any sane CPU since 2011
+-		if ( !Avx.IsSupported )
++		// Skip check when running under Wine/translation layer (e.g. macOS ARM64 via Rosetta)
++		if ( !Avx.IsSupported && Environment.GetEnvironmentVariable( "WINEPREFIX" ) == null )
+ 		{
+ 			MessageBox( IntPtr.Zero, "Your CPU needs to support AVX instructions to run this game.", "Unsupported CPU", 0x10 );
+ 			Environment.Exit( 1 );
+diff --git a/engine/Sandbox.Compiling.Test/Tests/BlacklistTest.cs b/engine/Sandbox.Compiling.Test/Tests/BlacklistTest.cs
+index 2256dee4..992e0b22 100644
+--- a/engine/Sandbox.Compiling.Test/Tests/BlacklistTest.cs
++++ b/engine/Sandbox.Compiling.Test/Tests/BlacklistTest.cs
+@@ -111,7 +111,7 @@ public partial class BlacklistTest
+ 			syntaxTrees: [syntaxTree],
+ 			references: [
+ 				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+-				MetadataReference.CreateFromFile( $"{path}\\System.Runtime.dll" ),
++				MetadataReference.CreateFromFile( System.IO.Path.Combine( path, "System.Runtime.dll" ) ),
+ 				MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
+ 				MetadataReference.CreateFromFile(typeof(System.Runtime.InteropServices.MemoryMarshal).Assembly.Location),
+ 				MetadataReference.CreateFromFile(typeof(Networking).Assembly.Location),
+diff --git a/engine/Sandbox.Compiling.Test/Tests/CodeGen.cs b/engine/Sandbox.Compiling.Test/Tests/CodeGen.cs
+index adbd8542..4eb55d1a 100644
+--- a/engine/Sandbox.Compiling.Test/Tests/CodeGen.cs
++++ b/engine/Sandbox.Compiling.Test/Tests/CodeGen.cs
+@@ -51,7 +51,7 @@ namespace Generator
+ 
+ 			var path = System.IO.Path.GetDirectoryName( typeof( System.Object ).Assembly.Location );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( System.Object ).Assembly.Location ) );
+-			refs.Add( MetadataReference.CreateFromFile( $"{path}\\System.Runtime.dll" ) );
++			refs.Add( MetadataReference.CreateFromFile( System.IO.Path.Combine( path, "System.Runtime.dll" ) ) );
+ 
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( Networking ).Assembly.Location ) );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( ConCmdAttribute ).Assembly.Location ) ); // Sandbox.System
+@@ -98,7 +98,7 @@ namespace Generator
+ 
+ 			var path = System.IO.Path.GetDirectoryName( typeof( System.Object ).Assembly.Location );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( System.Object ).Assembly.Location ) );
+-			refs.Add( MetadataReference.CreateFromFile( $"{path}\\System.Runtime.dll" ) );
++			refs.Add( MetadataReference.CreateFromFile( System.IO.Path.Combine( path, "System.Runtime.dll" ) ) );
+ 
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( Networking ).Assembly.Location ) );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( ConCmdAttribute ).Assembly.Location ) ); // Sandbox.System
+@@ -159,7 +159,7 @@ namespace Generator
+ 
+ 			var path = System.IO.Path.GetDirectoryName( typeof( System.Object ).Assembly.Location );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( System.Object ).Assembly.Location ) );
+-			refs.Add( MetadataReference.CreateFromFile( $"{path}\\System.Runtime.dll" ) );
++			refs.Add( MetadataReference.CreateFromFile( System.IO.Path.Combine( path, "System.Runtime.dll" ) ) );
+ 
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( Networking ).Assembly.Location ) );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( ConCmdAttribute ).Assembly.Location ) );
+diff --git a/engine/Sandbox.Compiling.Test/Tests/Razor.cs b/engine/Sandbox.Compiling.Test/Tests/Razor.cs
+index c7d93b65..9b6506c7 100644
+--- a/engine/Sandbox.Compiling.Test/Tests/Razor.cs
++++ b/engine/Sandbox.Compiling.Test/Tests/Razor.cs
+@@ -24,7 +24,7 @@ namespace Generator
+ 
+ 			var path = System.IO.Path.GetDirectoryName( typeof( System.Object ).Assembly.Location );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( System.Object ).Assembly.Location ) );
+-			refs.Add( MetadataReference.CreateFromFile( $"{path}\\System.Runtime.dll" ) );
++			refs.Add( MetadataReference.CreateFromFile( System.IO.Path.Combine( path, "System.Runtime.dll" ) ) );
+ 
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( Networking ).Assembly.Location ) );
+ 			refs.Add( MetadataReference.CreateFromFile( typeof( ConCmdAttribute ).Assembly.Location ) );
