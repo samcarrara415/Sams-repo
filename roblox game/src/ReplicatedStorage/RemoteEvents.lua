@@ -28,7 +28,9 @@ Remotes.BackpackUpdated = getOrCreate("RemoteEvent", "BackpackUpdated", folder)
 Remotes.CookIngredients = getOrCreate("RemoteEvent", "CookIngredients", folder)       -- cook backpack into food
 Remotes.SellForCoins = getOrCreate("RemoteEvent", "SellForCoins", folder)              -- sell backpack for coins
 Remotes.ChefCookingStarted = getOrCreate("RemoteEvent", "ChefCookingStarted", folder)
+Remotes.ChefCookingProgress = getOrCreate("RemoteEvent", "ChefCookingProgress", folder)
 Remotes.ChefCookingDone = getOrCreate("RemoteEvent", "ChefCookingDone", folder)
+Remotes.SkipCookQueue = getOrCreate("RemoteEvent", "SkipCookQueue", folder)
 
 -- Growth
 Remotes.FoodLevelUpdated = getOrCreate("RemoteEvent", "FoodLevelUpdated", folder)

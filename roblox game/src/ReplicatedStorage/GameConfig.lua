@@ -52,9 +52,11 @@ GameConfig.Growth = {
 -- Chef / Diner
 -- Players choose: sell raw for coins OR cook into food (growth)
 GameConfig.Diner = {
-	CookTimeSeconds = 3,        -- how long the chef takes to cook
-	BonusMultiplier = 1.5,      -- bonus if you sell a full backpack
-	FullBackpackThreshold = 18, -- slots filled to count as "full"
+	BaseCookTimeSeconds = 10,       -- minimum cook time
+	CookTimePerIngredient = 3,      -- +3 seconds per ingredient in backpack
+	MaxCookTimeSeconds = 180,       -- cap at 3 minutes
+	BonusMultiplier = 1.5,          -- bonus if you sell a full backpack
+	FullBackpackThreshold = 18,     -- slots filled to count as "full"
 }
 
 -- Coin Upgrades (bought with coins at an upgrade station)
@@ -268,6 +270,12 @@ GameConfig.Gamepasses = {
 		StealMultiplier = 2.0,         -- 2x stolen food from battles
 		DisplayName = "2x Food Steal (30 min)",
 		RobuxPrice = 100,
+	},
+	SkipQueue = {
+		GamepassId = 0,                -- replace with real gamepass ID
+		IsPermanent = true,            -- one-time purchase, lasts forever
+		DisplayName = "Skip Cook Queue (Permanent)",
+		RobuxPrice = 500,
 	},
 }
 
