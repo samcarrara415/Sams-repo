@@ -110,14 +110,14 @@ tabLayout.FillDirection = Enum.FillDirection.Horizontal
 tabLayout.Padding = UDim.new(0, 5)
 tabLayout.Parent = tabFrame
 
-local tabs = {"Upgrades", "Attacks", "Boosters"}
+local tabs = {"Upgrades", "Attacks", "Pets", "Boosters", "Coins"}
 local tabButtons = {}
 local contentFrames = {}
 
 for _, tabName in ipairs(tabs) do
 	local btn = Instance.new("TextButton")
 	btn.Name = tabName
-	btn.Size = UDim2.new(0, 180, 0, 30)
+	btn.Size = UDim2.new(0, 110, 0, 30)
 	btn.BackgroundColor3 = Color3.fromRGB(60, 50, 70)
 	btn.Text = tabName
 	btn.TextColor3 = Color3.new(1, 1, 1)
@@ -359,6 +359,125 @@ local function createBoosterRow(parent, boosterName, config)
 	return row
 end
 
+-- Create a Togo container row
+local function createTogoRow(parent, container)
+	local row = Instance.new("Frame")
+	row.Name = container.Name
+	row.Size = UDim2.new(1, 0, 0, 90)
+	row.BackgroundColor3 = Color3.fromRGB(45, 50, 40)
+	row.Parent = parent
+
+	local rowCorner = Instance.new("UICorner")
+	rowCorner.CornerRadius = UDim.new(0, 8)
+	rowCorner.Parent = row
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.5, 0, 0, 25)
+	nameLabel.Position = UDim2.new(0, 10, 0, 5)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = container.Name
+	nameLabel.TextColor3 = Color3.fromRGB(100, 255, 200)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 14
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = row
+
+	-- List possible pets
+	local petNames = {}
+	for _, pet in ipairs(container.Pets) do
+		table.insert(petNames, pet.Name .. " (" .. pet.Rarity .. " " .. pet.PickupMultiplier .. "x)")
+	end
+	local descLabel = Instance.new("TextLabel")
+	descLabel.Size = UDim2.new(0.7, 0, 0, 40)
+	descLabel.Position = UDim2.new(0, 10, 0, 28)
+	descLabel.BackgroundTransparency = 1
+	descLabel.Text = table.concat(petNames, ", ")
+	descLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+	descLabel.Font = Enum.Font.Gotham
+	descLabel.TextSize = 10
+	descLabel.TextXAlignment = Enum.TextXAlignment.Left
+	descLabel.TextWrapped = true
+	descLabel.Parent = row
+
+	local buyBtn = Instance.new("TextButton")
+	buyBtn.Name = "BuyButton"
+	buyBtn.Size = UDim2.new(0, 120, 0, 40)
+	buyBtn.Position = UDim2.new(1, -130, 0, 25)
+	buyBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+	buyBtn.Text = container.Cost .. " Coins"
+	buyBtn.TextColor3 = Color3.new(1, 1, 1)
+	buyBtn.Font = Enum.Font.GothamBold
+	buyBtn.TextSize = 14
+	buyBtn.Parent = row
+
+	local buyCorner = Instance.new("UICorner")
+	buyCorner.CornerRadius = UDim.new(0, 6)
+	buyCorner.Parent = buyBtn
+
+	buyBtn.MouseButton1Click:Connect(function()
+		buyBtn.Text = "Opening..."
+		buyBtn.Active = false
+		Remotes.OpenTogoContainer:FireServer(container.Name)
+	end)
+
+	return row
+end
+
+-- Create a coin pack row (Robux for Coins)
+local function createCoinPackRow(parent, pack)
+	local row = Instance.new("Frame")
+	row.Name = pack.Name
+	row.Size = UDim2.new(1, 0, 0, 60)
+	row.BackgroundColor3 = Color3.fromRGB(50, 45, 30)
+	row.Parent = parent
+
+	local rowCorner = Instance.new("UICorner")
+	rowCorner.CornerRadius = UDim.new(0, 8)
+	rowCorner.Parent = row
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.4, 0, 0, 25)
+	nameLabel.Position = UDim2.new(0, 10, 0, 8)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = pack.Name
+	nameLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 14
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = row
+
+	local coinsAmount = Instance.new("TextLabel")
+	coinsAmount.Size = UDim2.new(0.3, 0, 0, 20)
+	coinsAmount.Position = UDim2.new(0, 10, 0, 33)
+	coinsAmount.BackgroundTransparency = 1
+	coinsAmount.Text = pack.Coins .. " Coins"
+	coinsAmount.TextColor3 = Color3.fromRGB(200, 200, 150)
+	coinsAmount.Font = Enum.Font.Gotham
+	coinsAmount.TextSize = 12
+	coinsAmount.TextXAlignment = Enum.TextXAlignment.Left
+	coinsAmount.Parent = row
+
+	local buyBtn = Instance.new("TextButton")
+	buyBtn.Size = UDim2.new(0, 120, 0, 35)
+	buyBtn.Position = UDim2.new(1, -130, 0, 12)
+	buyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
+	buyBtn.Text = pack.RobuxPrice .. " Robux"
+	buyBtn.TextColor3 = Color3.new(1, 1, 1)
+	buyBtn.Font = Enum.Font.GothamBold
+	buyBtn.TextSize = 14
+	buyBtn.Parent = row
+
+	local buyCorner = Instance.new("UICorner")
+	buyCorner.CornerRadius = UDim.new(0, 6)
+	buyCorner.Parent = buyBtn
+
+	buyBtn.MouseButton1Click:Connect(function()
+		Remotes.PurchaseCoinPack:FireServer(pack.Name)
+	end)
+
+	return row
+end
+
 -- Populate shop tabs
 local function buildShop()
 	-- Upgrades tab
@@ -375,12 +494,68 @@ local function buildShop()
 	end
 	attacksContent.CanvasSize = UDim2.new(0, 0, 0, #GameConfig.Attacks * 76)
 
+	-- Pets tab (Togo Containers + owned pets)
+	local petsContent = contentFrames["Pets"]
+
+	-- Section header: Open Containers
+	local containerHeader = Instance.new("TextLabel")
+	containerHeader.Size = UDim2.new(1, 0, 0, 25)
+	containerHeader.BackgroundTransparency = 1
+	containerHeader.Text = "-- TOGO CONTAINERS --"
+	containerHeader.TextColor3 = Color3.fromRGB(100, 255, 200)
+	containerHeader.Font = Enum.Font.GothamBold
+	containerHeader.TextSize = 13
+	containerHeader.Parent = petsContent
+
+	for _, container in ipairs(GameConfig.TogoContainers) do
+		createTogoRow(petsContent, container)
+	end
+
+	-- Section header: Owned Pets
+	local ownedHeader = Instance.new("TextLabel")
+	ownedHeader.Name = "OwnedHeader"
+	ownedHeader.Size = UDim2.new(1, 0, 0, 25)
+	ownedHeader.BackgroundTransparency = 1
+	ownedHeader.Text = "-- YOUR PETS (tap to equip) --"
+	ownedHeader.TextColor3 = Color3.fromRGB(255, 200, 100)
+	ownedHeader.Font = Enum.Font.GothamBold
+	ownedHeader.TextSize = 13
+	ownedHeader.Parent = petsContent
+
+	-- Unequip button
+	local unequipBtn = Instance.new("TextButton")
+	unequipBtn.Name = "UnequipBtn"
+	unequipBtn.Size = UDim2.new(1, 0, 0, 30)
+	unequipBtn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
+	unequipBtn.Text = "Unequip Pet"
+	unequipBtn.TextColor3 = Color3.fromRGB(255, 150, 150)
+	unequipBtn.Font = Enum.Font.GothamBold
+	unequipBtn.TextSize = 12
+	unequipBtn.Parent = petsContent
+
+	local unequipCorner = Instance.new("UICorner")
+	unequipCorner.CornerRadius = UDim.new(0, 6)
+	unequipCorner.Parent = unequipBtn
+
+	unequipBtn.MouseButton1Click:Connect(function()
+		Remotes.EquipPet:FireServer(nil)
+	end)
+
+	petsContent.CanvasSize = UDim2.new(0, 0, 0, (#GameConfig.TogoContainers * 96) + 200)
+
 	-- Boosters tab
 	local boostersContent = contentFrames["Boosters"]
 	for boosterName, config in pairs(GameConfig.Gamepasses) do
 		createBoosterRow(boostersContent, boosterName, config)
 	end
-	boostersContent.CanvasSize = UDim2.new(0, 0, 0, 4 * 66)
+	boostersContent.CanvasSize = UDim2.new(0, 0, 0, 6 * 66)
+
+	-- Coins tab (Robux for Coins)
+	local coinsContent = contentFrames["Coins"]
+	for _, pack in ipairs(GameConfig.CoinPacks) do
+		createCoinPackRow(coinsContent, pack)
+	end
+	coinsContent.CanvasSize = UDim2.new(0, 0, 0, #GameConfig.CoinPacks * 66)
 end
 
 -- Toggle shop
@@ -427,6 +602,84 @@ Remotes.AttackUnlocked.OnClientEvent:Connect(function(attackName)
 		row.BuyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 		row.BuyButton.Active = false
 	end
+end)
+
+-- Pet hatched — show result and refresh owned pets list
+local rarityPetColors = {
+	Common = Color3.fromRGB(150, 255, 150),
+	Uncommon = Color3.fromRGB(100, 150, 255),
+	Rare = Color3.fromRGB(255, 215, 0),
+	Legendary = Color3.fromRGB(255, 80, 255),
+}
+
+local function refreshOwnedPets(ownedPets, equippedPet)
+	local petsContent = contentFrames["Pets"]
+	-- Remove old pet rows
+	for _, child in ipairs(petsContent:GetChildren()) do
+		if child.Name:sub(1, 8) == "OwnedPet" then
+			child:Destroy()
+		end
+	end
+
+	if not ownedPets then return end
+
+	for i, pet in ipairs(ownedPets) do
+		local row = Instance.new("TextButton")
+		row.Name = "OwnedPet_" .. i
+		row.Size = UDim2.new(1, 0, 0, 35)
+		row.BackgroundColor3 = (equippedPet == pet.Name) and Color3.fromRGB(60, 90, 60) or Color3.fromRGB(50, 45, 55)
+		row.Text = "  " .. pet.Name .. " [" .. pet.Rarity .. "] — " .. pet.PickupMultiplier .. "x pickup"
+		row.TextColor3 = rarityPetColors[pet.Rarity] or Color3.new(1, 1, 1)
+		row.Font = Enum.Font.GothamBold
+		row.TextSize = 12
+		row.TextXAlignment = Enum.TextXAlignment.Left
+		row.Parent = petsContent
+		row.LayoutOrder = 100 + i
+
+		local rowCorner = Instance.new("UICorner")
+		rowCorner.CornerRadius = UDim.new(0, 6)
+		rowCorner.Parent = row
+
+		row.MouseButton1Click:Connect(function()
+			Remotes.EquipPet:FireServer(pet.Name)
+		end)
+	end
+
+	-- Update canvas
+	local totalItems = #GameConfig.TogoContainers * 96 + 80 + (#ownedPets * 41) + 50
+	petsContent.CanvasSize = UDim2.new(0, 0, 0, totalItems)
+end
+
+Remotes.PetHatched.OnClientEvent:Connect(function(info)
+	-- Re-enable buy buttons on Togo containers
+	local petsContent = contentFrames["Pets"]
+	for _, container in ipairs(GameConfig.TogoContainers) do
+		local row = petsContent:FindFirstChild(container.Name)
+		if row then
+			local btn = row:FindFirstChild("BuyButton")
+			if btn then
+				btn.Text = container.Cost .. " Coins"
+				btn.Active = true
+			end
+		end
+	end
+
+	-- Refresh owned pets list
+	local data = Remotes.GetPlayerData:InvokeServer()
+	if data then
+		refreshOwnedPets(data.OwnedPets, data.EquippedPet)
+	end
+end)
+
+Remotes.PetEquipped.OnClientEvent:Connect(function(petName)
+	local data = Remotes.GetPlayerData:InvokeServer()
+	if data then
+		refreshOwnedPets(data.OwnedPets, petName)
+	end
+end)
+
+Remotes.PetsUpdated.OnClientEvent:Connect(function(ownedPets, equippedPet)
+	refreshOwnedPets(ownedPets, equippedPet)
 end)
 
 -- Booster activated feedback
@@ -480,6 +733,11 @@ task.spawn(function()
 				row.BuyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 				row.BuyButton.Active = false
 			end
+		end
+
+		-- Load owned pets
+		if data.OwnedPets then
+			refreshOwnedPets(data.OwnedPets, data.EquippedPet)
 		end
 	end
 end)

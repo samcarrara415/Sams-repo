@@ -54,9 +54,18 @@ Remotes.BattleEnded = getOrCreate("RemoteEvent", "BattleEnded", folder)
 Remotes.BattleDamage = getOrCreate("RemoteEvent", "BattleDamage", folder)
 Remotes.BattleHealthUpdated = getOrCreate("RemoteEvent", "BattleHealthUpdated", folder)
 
+-- Pets / Togo Containers
+Remotes.OpenTogoContainer = getOrCreate("RemoteEvent", "OpenTogoContainer", folder)
+Remotes.TogoOpening = getOrCreate("RemoteEvent", "TogoOpening", folder)
+Remotes.PetHatched = getOrCreate("RemoteEvent", "PetHatched", folder)
+Remotes.EquipPet = getOrCreate("RemoteEvent", "EquipPet", folder)
+Remotes.PetEquipped = getOrCreate("RemoteEvent", "PetEquipped", folder)
+Remotes.PetsUpdated = getOrCreate("RemoteEvent", "PetsUpdated", folder)
+
 -- Shop / Gamepasses
 Remotes.PurchaseBooster = getOrCreate("RemoteEvent", "PurchaseBooster", folder)
 Remotes.BoosterActivated = getOrCreate("RemoteEvent", "BoosterActivated", folder)
+Remotes.PurchaseCoinPack = getOrCreate("RemoteEvent", "PurchaseCoinPack", folder)
 
 -- Player data sync
 Remotes.GetPlayerData = getOrCreate("RemoteFunction", "GetPlayerData", folder)

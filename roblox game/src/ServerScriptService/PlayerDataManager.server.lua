@@ -22,6 +22,8 @@ local DEFAULT_DATA = {
 	UnlockedAttacks = {"Belly Bump"},  -- starter attack is free
 	EquippedAttacks = {"Belly Bump"},  -- attacks in your hotbar
 	ActiveBoosters = {},               -- {boosterName = expireTick}
+	OwnedPets = {},                    -- array of {Name, Rarity, PickupMultiplier}
+	EquippedPet = nil,                 -- currently active pet name (or nil)
 }
 
 function PlayerDataManager.GetData(player)
@@ -186,6 +188,53 @@ function PlayerDataManager.PurchaseUpgrade(player, upgradeName)
 	return true
 end
 
+function PlayerDataManager.GetPickupMultiplier(player)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return 1.0 end
+	if not data.EquippedPet then return 1.0 end
+
+	-- Find the equipped pet's multiplier
+	for _, pet in ipairs(data.OwnedPets) do
+		if pet.Name == data.EquippedPet then
+			return pet.PickupMultiplier
+		end
+	end
+	return 1.0
+end
+
+function PlayerDataManager.AddPet(player, petData)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return end
+
+	table.insert(data.OwnedPets, {
+		Name = petData.Name,
+		Rarity = petData.Rarity,
+		PickupMultiplier = petData.PickupMultiplier,
+	})
+	Remotes.PetsUpdated:FireClient(player, data.OwnedPets, data.EquippedPet)
+end
+
+function PlayerDataManager.EquipPet(player, petName)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return false end
+
+	if petName == nil then
+		data.EquippedPet = nil
+		Remotes.PetEquipped:FireClient(player, nil)
+		return true
+	end
+
+	-- Verify they own it
+	for _, pet in ipairs(data.OwnedPets) do
+		if pet.Name == petName then
+			data.EquippedPet = petName
+			Remotes.PetEquipped:FireClient(player, petName)
+			return true
+		end
+	end
+	return false
+end
+
 function PlayerDataManager.UnlockAttack(player, attackName)
 	local data = PlayerDataManager.GetData(player)
 	if not data then return false, "No data" end
@@ -284,6 +333,11 @@ end)
 -- Remote: unlock attack
 Remotes.UnlockAttack.OnServerEvent:Connect(function(player, attackName)
 	PlayerDataManager.UnlockAttack(player, attackName)
+end)
+
+-- Remote: equip pet
+Remotes.EquipPet.OnServerEvent:Connect(function(player, petName)
+	PlayerDataManager.EquipPet(player, petName)
 end)
 
 return PlayerDataManager

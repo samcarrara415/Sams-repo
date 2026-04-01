@@ -181,6 +181,56 @@ GameConfig.Attacks = {
 	},
 }
 
+-- Togo Containers (like eggs) — open for pets that multiply ingredient pickups
+GameConfig.TogoContainers = {
+	{
+		Name = "Basic Togo Box",
+		Cost = 50,               -- coins
+		Currency = "Coins",
+		OpenTimeSeconds = 3,
+		Pets = {
+			{Name = "Chicken Nugget",  Rarity = "Common",   PickupMultiplier = 1.5,  Weight = 50},
+			{Name = "Burger Buddy",    Rarity = "Common",   PickupMultiplier = 1.5,  Weight = 50},
+			{Name = "Fry Guy",         Rarity = "Uncommon", PickupMultiplier = 2.0,  Weight = 25},
+			{Name = "Pizza Pal",       Rarity = "Uncommon", PickupMultiplier = 2.0,  Weight = 20},
+			{Name = "Golden Drumstick",Rarity = "Rare",     PickupMultiplier = 3.0,  Weight = 5},
+		},
+	},
+	{
+		Name = "Premium Togo Box",
+		Cost = 200,
+		Currency = "Coins",
+		OpenTimeSeconds = 3,
+		Pets = {
+			{Name = "Sushi Cat",       Rarity = "Uncommon", PickupMultiplier = 2.5,  Weight = 40},
+			{Name = "Steak Shark",     Rarity = "Uncommon", PickupMultiplier = 2.5,  Weight = 35},
+			{Name = "Donut Dragon",    Rarity = "Rare",     PickupMultiplier = 4.0,  Weight = 15},
+			{Name = "Diamond Chef",    Rarity = "Rare",     PickupMultiplier = 5.0,  Weight = 8},
+			{Name = "Golden Chud",     Rarity = "Legendary",PickupMultiplier = 8.0,  Weight = 2},
+		},
+	},
+	{
+		Name = "Legendary Togo Box",
+		Cost = 500,
+		Currency = "Coins",
+		OpenTimeSeconds = 5,
+		Pets = {
+			{Name = "Donut Dragon",    Rarity = "Rare",     PickupMultiplier = 4.0,  Weight = 40},
+			{Name = "Diamond Chef",    Rarity = "Rare",     PickupMultiplier = 5.0,  Weight = 30},
+			{Name = "Golden Chud",     Rarity = "Legendary",PickupMultiplier = 8.0,  Weight = 20},
+			{Name = "Mega Chud King",  Rarity = "Legendary",PickupMultiplier = 10.0, Weight = 10},
+		},
+	},
+}
+
+-- Robux-to-Coins packs
+GameConfig.CoinPacks = {
+	{Name = "Snack Pack",     Coins = 100,   RobuxPrice = 25},
+	{Name = "Meal Deal",      Coins = 500,   RobuxPrice = 100},
+	{Name = "Feast Bundle",   Coins = 1200,  RobuxPrice = 200},
+	{Name = "Chud Vault",     Coins = 5000,  RobuxPrice = 700},
+}
+
 -- Gamepasses / In-App Purchases (Robux)
 GameConfig.Gamepasses = {
 	GrowthBooster = {

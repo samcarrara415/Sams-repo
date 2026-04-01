@@ -51,6 +51,23 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gameP
 	end
 end)
 
+-- Handle Robux-for-Coins purchases (Developer Products)
+Remotes.PurchaseCoinPack.OnServerEvent:Connect(function(player, packName)
+	local pack = nil
+	for _, p in ipairs(GameConfig.CoinPacks) do
+		if p.Name == packName then
+			pack = p
+			break
+		end
+	end
+	if not pack then return end
+
+	-- In dev mode (no real product IDs), give coins directly
+	-- Replace with MarketplaceService:PromptProductPurchase for production
+	local PlayerDataManager = require(script.Parent:WaitForChild("PlayerDataManager"))
+	PlayerDataManager.AddCoins(player, pack.Coins)
+end)
+
 -- Periodic cleanup of expired boosters
 task.spawn(function()
 	while true do

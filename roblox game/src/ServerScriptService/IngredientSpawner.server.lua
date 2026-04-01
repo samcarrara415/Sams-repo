@@ -178,7 +178,24 @@ Remotes.CollectIngredient.OnServerEvent:Connect(function(player, ingredientPart)
 	if distance > collectRange + 5 then return end -- +5 tolerance
 
 	local ingredientName = ingredientPart.IngredientName.Value
-	local success = PlayerDataManager.AddToBackpack(player, ingredientName)
+
+	-- Pet multiplier: equipped pet multiplies how many times the ingredient is added
+	local petMultiplier = PlayerDataManager.GetPickupMultiplier(player)
+	local pickupCount = math.floor(petMultiplier)
+	-- Handle fractional multiplier with random chance
+	local fractional = petMultiplier - pickupCount
+	if fractional > 0 and math.random() < fractional then
+		pickupCount = pickupCount + 1
+	end
+
+	local success = false
+	for _ = 1, pickupCount do
+		if PlayerDataManager.AddToBackpack(player, ingredientName) then
+			success = true
+		else
+			break -- backpack full
+		end
+	end
 
 	if success then
 		IngredientSpawner.RemoveIngredient(ingredientPart)
