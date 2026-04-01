@@ -98,7 +98,7 @@ GameConfig.Battle = {
 	QueueCooldownSeconds = 10,  -- cooldown after a battle
 	CountdownSeconds = 5,       -- countdown before fight starts
 	ArenaDurationSeconds = 60,  -- max fight time before draw
-	FoodStealPercent = 1.0,     -- winner takes 100% of loser's food level
+	FoodStealPercent = 0.7,     -- winner takes 70% of loser's food level
 	MinFoodToEnter = 10,        -- minimum food level to queue
 	BaseHealth = 100,           -- starting HP in arena
 	HealthPerFoodLevel = 0.5,   -- bonus HP from being chudded
@@ -211,6 +211,13 @@ GameConfig.Gamepasses = {
 		Multiplier = 2.0,              -- 2x coins from selling
 		DisplayName = "2x Coins Booster (30 min)",
 		RobuxPrice = 75,
+	},
+	DoubleStealer = {
+		GamepassId = 0,                -- replace with real gamepass ID
+		DurationSeconds = 30 * 60,     -- 30 minutes
+		StealMultiplier = 2.0,         -- 2x stolen food from battles
+		DisplayName = "2x Food Steal (30 min)",
+		RobuxPrice = 100,
 	},
 }
 

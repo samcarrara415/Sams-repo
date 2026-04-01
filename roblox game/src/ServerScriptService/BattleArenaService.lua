@@ -48,7 +48,11 @@ local function endBattle(winner, loser)
 	local stolenFood = 0
 	if loserData then
 		stolenFood = math.floor(loserData.FoodLevel * GameConfig.Battle.FoodStealPercent)
-		PlayerDataManager.SetFoodLevel(loser, GameConfig.Growth.FoodLevelOnDeath)
+		-- DoubleStealer booster: 2x stolen food
+		if winnerData and winnerData.ActiveBoosters.DoubleStealer and tick() < winnerData.ActiveBoosters.DoubleStealer then
+			stolenFood = math.floor(stolenFood * GameConfig.Gamepasses.DoubleStealer.StealMultiplier)
+		end
+		PlayerDataManager.SetFoodLevel(loser, loserData.FoodLevel - stolenFood)
 	end
 
 	if winnerData then
