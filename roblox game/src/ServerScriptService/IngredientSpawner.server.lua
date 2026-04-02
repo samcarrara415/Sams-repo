@@ -11,22 +11,23 @@ local IngredientSpawner = {}
 local activeIngredients = {} -- tracks all spawned ingredient parts
 local spawnPoints = {}       -- references to spawn point parts in workspace
 
--- Weighted random selection
-local function pickRandomIngredient()
+-- Weighted random selection (from a specific ingredient list)
+local function pickRandomIngredient(ingredientList)
+	ingredientList = ingredientList or GameConfig.Ingredients
 	local totalWeight = 0
-	for _, ingredient in ipairs(GameConfig.Ingredients) do
+	for _, ingredient in ipairs(ingredientList) do
 		totalWeight = totalWeight + ingredient.SpawnWeight
 	end
 
 	local roll = math.random() * totalWeight
 	local cumulative = 0
-	for _, ingredient in ipairs(GameConfig.Ingredients) do
+	for _, ingredient in ipairs(ingredientList) do
 		cumulative = cumulative + ingredient.SpawnWeight
 		if roll <= cumulative then
 			return ingredient
 		end
 	end
-	return GameConfig.Ingredients[1]
+	return ingredientList[1]
 end
 
 -- Create a visible ingredient part in the world

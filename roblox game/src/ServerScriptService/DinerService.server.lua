@@ -12,11 +12,13 @@ local DinerService = {}
 local cookingPlayers = {}    -- tracks who is currently cooking
 local skipQueueOwners = {}   -- [userId] = true if they own the skip queue pass
 
--- Find ingredient config by name
+-- Find ingredient config by name (searches all worlds)
 local function getIngredientConfig(name)
-	for _, ingredient in ipairs(GameConfig.Ingredients) do
-		if ingredient.Name == name then
-			return ingredient
+	for _, world in ipairs(GameConfig.Worlds) do
+		for _, ingredient in ipairs(world.Ingredients) do
+			if ingredient.Name == name then
+				return ingredient
+			end
 		end
 	end
 	return nil
@@ -136,6 +138,10 @@ Remotes.CookIngredients.OnServerEvent:Connect(function(player)
 		end
 	end
 
+	-- Kitchen tool upgrade bonus (FoodValue type)
+	local foodMultiplier = PlayerDataManager.GetFoodValueMultiplier(player)
+	totalFood = math.floor(totalFood * foodMultiplier)
+
 	-- Full backpack bonus
 	if #items >= GameConfig.Diner.FullBackpackThreshold then
 		totalFood = math.floor(totalFood * GameConfig.Diner.BonusMultiplier)
@@ -212,6 +218,10 @@ Remotes.SellForCoins.OnServerEvent:Connect(function(player)
 			totalCoins = totalCoins + config.CoinValue
 		end
 	end
+
+	-- Kitchen tool upgrade bonus (CoinValue type)
+	local coinMultiplier = PlayerDataManager.GetCoinValueMultiplier(player)
+	totalCoins = math.floor(totalCoins * coinMultiplier)
 
 	-- Coin booster
 	if data.ActiveBoosters.CoinBooster and tick() < data.ActiveBoosters.CoinBooster then

@@ -27,6 +27,8 @@ local DEFAULT_DATA = {
 	Rebirths = 0,                      -- number of rebirths completed
 	DuelWins = 0,                      -- total battle arena wins
 	TotalRobuxSpent = 0,               -- total Robux spent in shop
+	CurrentWorld = 1,                  -- which world they're in (index)
+	WorldUpgrades = {},                -- {["WorldName_UpgradeName"] = level}
 }
 
 function PlayerDataManager.GetData(player)
@@ -129,6 +131,89 @@ function PlayerDataManager.GetBackpackCapacity(player)
 	return base + upgradeBonus + boosterBonus
 end
 
+-- Get current world config for a player
+function PlayerDataManager.GetCurrentWorld(player)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return GameConfig.Worlds[1] end
+	return GameConfig.Worlds[data.CurrentWorld] or GameConfig.Worlds[1]
+end
+
+-- Get world upgrade level
+function PlayerDataManager.GetWorldUpgradeLevel(player, worldName, upgradeName)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return 0 end
+	local key = worldName .. "_" .. upgradeName
+	return data.WorldUpgrades[key] or 0
+end
+
+-- Get total bonus from world upgrades of a specific type
+function PlayerDataManager.GetWorldUpgradeBonus(player, boostType)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return 0 end
+
+	local totalBonus = 0
+	for _, world in ipairs(GameConfig.Worlds) do
+		if world.Upgrades then
+			for upgName, upgConfig in pairs(world.Upgrades) do
+				if upgConfig.BoostType == boostType then
+					local key = world.Name .. "_" .. upgName
+					local level = data.WorldUpgrades[key] or 0
+					totalBonus = totalBonus + (level * upgConfig.BonusPerLevel)
+				end
+			end
+		end
+	end
+	return totalBonus
+end
+
+-- Purchase a world-specific upgrade
+function PlayerDataManager.PurchaseWorldUpgrade(player, worldIndex, upgradeName)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return false, "No data" end
+
+	local world = GameConfig.Worlds[worldIndex]
+	if not world then return false, "Invalid world" end
+	if not world.Upgrades or not world.Upgrades[upgradeName] then
+		return false, "Invalid upgrade"
+	end
+
+	-- Must have enough rebirths to access this world
+	if data.Rebirths < world.RequiredRebirths then
+		return false, "Need " .. world.RequiredRebirths .. " rebirths"
+	end
+
+	local config = world.Upgrades[upgradeName]
+	local key = world.Name .. "_" .. upgradeName
+	local currentLevel = data.WorldUpgrades[key] or 0
+
+	if currentLevel >= config.MaxLevel then
+		return false, "Max level reached"
+	end
+
+	local cost = math.floor(config.BaseCost * (config.CostMultiplier ^ currentLevel))
+	if not PlayerDataManager.SpendCoins(player, cost) then
+		return false, "Not enough coins"
+	end
+
+	data.WorldUpgrades[key] = currentLevel + 1
+	Remotes.WorldUpgradeUpdated:FireClient(player, worldIndex, upgradeName, data.WorldUpgrades[key])
+	return true
+end
+
+-- Switch world
+function PlayerDataManager.SetWorld(player, worldIndex)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return false end
+
+	local world = GameConfig.Worlds[worldIndex]
+	if not world then return false end
+	if data.Rebirths < world.RequiredRebirths then return false end
+
+	data.CurrentWorld = worldIndex
+	Remotes.WorldChanged:FireClient(player, worldIndex, world.Name)
+	return true
+end
+
 function PlayerDataManager.GetCollectRange(player)
 	local data = PlayerDataManager.GetData(player)
 	if not data then return GameConfig.Collection.BaseCollectRange end
@@ -136,7 +221,9 @@ function PlayerDataManager.GetCollectRange(player)
 	local base = GameConfig.Collection.BaseCollectRange
 	local upgradeLevel = data.Upgrades.CollectRange
 	local bonus = upgradeLevel * GameConfig.Upgrades.CollectRange.BonusPerLevel
-	return base + bonus
+	-- Add world upgrade bonus (CollectRange type)
+	local worldBonus = PlayerDataManager.GetWorldUpgradeBonus(player, "CollectRange")
+	return base + bonus + worldBonus
 end
 
 function PlayerDataManager.GetCollectSpeed(player)
@@ -146,7 +233,19 @@ function PlayerDataManager.GetCollectSpeed(player)
 	local base = GameConfig.Collection.BaseCollectSpeed
 	local upgradeLevel = data.Upgrades.CollectSpeed
 	local bonus = upgradeLevel * GameConfig.Upgrades.CollectSpeed.BonusPerLevel
-	return base + bonus
+	-- Add world upgrade bonus (CollectSpeed type)
+	local worldBonus = PlayerDataManager.GetWorldUpgradeBonus(player, "CollectSpeed")
+	return base + bonus + worldBonus
+end
+
+-- Get total food value multiplier from world kitchen tool upgrades
+function PlayerDataManager.GetFoodValueMultiplier(player)
+	return 1.0 + PlayerDataManager.GetWorldUpgradeBonus(player, "FoodValue")
+end
+
+-- Get total coin value multiplier from world kitchen tool upgrades
+function PlayerDataManager.GetCoinValueMultiplier(player)
+	return 1.0 + PlayerDataManager.GetWorldUpgradeBonus(player, "CoinValue")
 end
 
 function PlayerDataManager.AddToBackpack(player, ingredientName)
@@ -433,6 +532,16 @@ end)
 -- Remote: rebirth
 Remotes.RequestRebirth.OnServerEvent:Connect(function(player)
 	PlayerDataManager.DoRebirth(player)
+end)
+
+-- Remote: select world
+Remotes.SelectWorld.OnServerEvent:Connect(function(player, worldIndex)
+	PlayerDataManager.SetWorld(player, worldIndex)
+end)
+
+-- Remote: purchase world upgrade
+Remotes.PurchaseWorldUpgrade.OnServerEvent:Connect(function(player, worldIndex, upgradeName)
+	PlayerDataManager.PurchaseWorldUpgrade(player, worldIndex, upgradeName)
 end)
 
 return PlayerDataManager

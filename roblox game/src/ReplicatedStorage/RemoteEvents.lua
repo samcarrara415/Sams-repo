@@ -69,6 +69,12 @@ Remotes.PurchaseBooster = getOrCreate("RemoteEvent", "PurchaseBooster", folder)
 Remotes.BoosterActivated = getOrCreate("RemoteEvent", "BoosterActivated", folder)
 Remotes.PurchaseCoinPack = getOrCreate("RemoteEvent", "PurchaseCoinPack", folder)
 
+-- Worlds
+Remotes.SelectWorld = getOrCreate("RemoteEvent", "SelectWorld", folder)
+Remotes.WorldChanged = getOrCreate("RemoteEvent", "WorldChanged", folder)
+Remotes.PurchaseWorldUpgrade = getOrCreate("RemoteEvent", "PurchaseWorldUpgrade", folder)
+Remotes.WorldUpgradeUpdated = getOrCreate("RemoteEvent", "WorldUpgradeUpdated", folder)
+
 -- Rebirth
 Remotes.RequestRebirth = getOrCreate("RemoteEvent", "RequestRebirth", folder)
 Remotes.RebirthComplete = getOrCreate("RemoteEvent", "RebirthComplete", folder)
