@@ -49,6 +49,39 @@ GameConfig.Growth = {
 	FoodLevelOnDeath = 0,       -- reset to this after losing a battle
 }
 
+-- Rebirth System
+GameConfig.Rebirth = {
+	BaseFoodRequired = 500,         -- food level needed for first rebirth
+	FoodMultiplierPerRebirth = 1.5, -- each rebirth costs 1.5x more food
+	BoostPerRebirth = 0.02,         -- +2% to ALL gains per rebirth
+	MaxRebirths = 100,              -- cap
+	-- What resets on rebirth:
+	ResetsFood = true,              -- food level goes to 0
+	ResetsCoins = false,            -- keep your coins
+	ResetsUpgrades = true,          -- upgrades reset to 0
+	ResetsPets = false,             -- keep your pets
+	ResetsAttacks = false,          -- keep unlocked attacks
+}
+
+-- Leaderboards (uses Roblox OrderedDataStores)
+GameConfig.Leaderboards = {
+	Rebirths = {
+		DisplayName = "REBIRTHS",
+		DataStoreName = "RebirthLeaderboard",
+		MaxEntries = 50,
+	},
+	DuelWins = {
+		DisplayName = "DUEL WINS",
+		DataStoreName = "DuelWinsLeaderboard",
+		MaxEntries = 50,
+	},
+	TopSpender = {
+		DisplayName = "TOP SPENDER",
+		DataStoreName = "TopSpenderLeaderboard",
+		MaxEntries = 50,
+	},
+}
+
 -- Chef / Diner
 -- Players choose: sell raw for coins OR cook into food (growth)
 GameConfig.Diner = {

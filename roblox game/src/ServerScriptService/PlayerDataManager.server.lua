@@ -24,10 +24,92 @@ local DEFAULT_DATA = {
 	ActiveBoosters = {},               -- {boosterName = expireTick}
 	OwnedPets = {},                    -- array of {Name, Rarity, PickupMultiplier}
 	EquippedPet = nil,                 -- currently active pet name (or nil)
+	Rebirths = 0,                      -- number of rebirths completed
+	DuelWins = 0,                      -- total battle arena wins
+	TotalRobuxSpent = 0,               -- total Robux spent in shop
 }
 
 function PlayerDataManager.GetData(player)
 	return PlayerDataManager.Data[player.UserId]
+end
+
+-- Get the rebirth multiplier: 1.0 + (rebirths * 0.02)
+function PlayerDataManager.GetRebirthMultiplier(player)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return 1.0 end
+	return 1.0 + (data.Rebirths * GameConfig.Rebirth.BoostPerRebirth)
+end
+
+-- Get food required for next rebirth
+function PlayerDataManager.GetRebirthCost(player)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return GameConfig.Rebirth.BaseFoodRequired end
+	return math.floor(GameConfig.Rebirth.BaseFoodRequired * (GameConfig.Rebirth.FoodMultiplierPerRebirth ^ data.Rebirths))
+end
+
+-- Perform a rebirth
+function PlayerDataManager.DoRebirth(player)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return false, "No data" end
+
+	if data.Rebirths >= GameConfig.Rebirth.MaxRebirths then
+		return false, "Max rebirths reached"
+	end
+
+	local cost = PlayerDataManager.GetRebirthCost(player)
+	if data.FoodLevel < cost then
+		return false, "Need " .. cost .. " food to rebirth"
+	end
+
+	-- Increment rebirth count
+	data.Rebirths = data.Rebirths + 1
+
+	-- Reset food
+	if GameConfig.Rebirth.ResetsFood then
+		data.FoodLevel = 0
+		Remotes.FoodLevelUpdated:FireClient(player, 0)
+		PlayerDataManager.UpdatePlayerScale(player)
+	end
+
+	-- Reset upgrades
+	if GameConfig.Rebirth.ResetsUpgrades then
+		for upgradeName, _ in pairs(data.Upgrades) do
+			data.Upgrades[upgradeName] = 0
+		end
+		-- Reset walk speed
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.WalkSpeed = 16
+			end
+		end
+	end
+
+	-- Clear backpack
+	data.Backpack = {}
+	Remotes.BackpackUpdated:FireClient(player, data.Backpack)
+
+	-- Notify client
+	Remotes.RebirthComplete:FireClient(player, {
+		NewRebirthCount = data.Rebirths,
+		NewMultiplier = PlayerDataManager.GetRebirthMultiplier(player),
+		NextCost = PlayerDataManager.GetRebirthCost(player),
+	})
+
+	return true
+end
+
+function PlayerDataManager.AddDuelWin(player)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return end
+	data.DuelWins = data.DuelWins + 1
+end
+
+function PlayerDataManager.AddRobuxSpent(player, amount)
+	local data = PlayerDataManager.GetData(player)
+	if not data then return end
+	data.TotalRobuxSpent = data.TotalRobuxSpent + amount
 end
 
 function PlayerDataManager.GetBackpackCapacity(player)
@@ -95,7 +177,11 @@ function PlayerDataManager.AddFoodLevel(player, amount)
 	local data = PlayerDataManager.GetData(player)
 	if not data then return end
 
-	data.FoodLevel = data.FoodLevel + amount
+	-- Apply rebirth multiplier
+	local rebirthMult = PlayerDataManager.GetRebirthMultiplier(player)
+	local boostedAmount = math.floor(amount * rebirthMult)
+
+	data.FoodLevel = data.FoodLevel + boostedAmount
 	Remotes.FoodLevelUpdated:FireClient(player, data.FoodLevel)
 	PlayerDataManager.UpdatePlayerScale(player)
 end
@@ -113,7 +199,11 @@ function PlayerDataManager.AddCoins(player, amount)
 	local data = PlayerDataManager.GetData(player)
 	if not data then return end
 
-	data.Coins = data.Coins + amount
+	-- Apply rebirth multiplier to coin gains
+	local rebirthMult = PlayerDataManager.GetRebirthMultiplier(player)
+	local boostedAmount = math.floor(amount * rebirthMult)
+
+	data.Coins = data.Coins + boostedAmount
 	Remotes.CoinsUpdated:FireClient(player, data.Coins)
 end
 
@@ -338,6 +428,11 @@ end)
 -- Remote: equip pet
 Remotes.EquipPet.OnServerEvent:Connect(function(player, petName)
 	PlayerDataManager.EquipPet(player, petName)
+end)
+
+-- Remote: rebirth
+Remotes.RequestRebirth.OnServerEvent:Connect(function(player)
+	PlayerDataManager.DoRebirth(player)
 end)
 
 return PlayerDataManager

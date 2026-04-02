@@ -42,10 +42,18 @@ end)
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, wasPurchased)
 	if not wasPurchased then return end
 
+	local PlayerDataManager = require(script.Parent:WaitForChild("PlayerDataManager"))
+
 	-- Find which booster this gamepass ID corresponds to
 	for boosterName, config in pairs(GameConfig.Gamepasses) do
 		if config.GamepassId == gamePassId then
-			activateBooster(player, boosterName, config.DurationSeconds)
+			if config.DurationSeconds then
+				activateBooster(player, boosterName, config.DurationSeconds)
+			end
+			-- Track Robux spent for leaderboard
+			if config.RobuxPrice then
+				PlayerDataManager.AddRobuxSpent(player, config.RobuxPrice)
+			end
 			break
 		end
 	end
@@ -66,6 +74,7 @@ Remotes.PurchaseCoinPack.OnServerEvent:Connect(function(player, packName)
 	-- Replace with MarketplaceService:PromptProductPurchase for production
 	local PlayerDataManager = require(script.Parent:WaitForChild("PlayerDataManager"))
 	PlayerDataManager.AddCoins(player, pack.Coins)
+	PlayerDataManager.AddRobuxSpent(player, pack.RobuxPrice)
 end)
 
 -- Periodic cleanup of expired boosters

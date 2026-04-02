@@ -69,6 +69,15 @@ Remotes.PurchaseBooster = getOrCreate("RemoteEvent", "PurchaseBooster", folder)
 Remotes.BoosterActivated = getOrCreate("RemoteEvent", "BoosterActivated", folder)
 Remotes.PurchaseCoinPack = getOrCreate("RemoteEvent", "PurchaseCoinPack", folder)
 
+-- Rebirth
+Remotes.RequestRebirth = getOrCreate("RemoteEvent", "RequestRebirth", folder)
+Remotes.RebirthComplete = getOrCreate("RemoteEvent", "RebirthComplete", folder)
+Remotes.RebirthInfoUpdated = getOrCreate("RemoteEvent", "RebirthInfoUpdated", folder)
+
+-- Leaderboards
+Remotes.GetLeaderboardData = getOrCreate("RemoteFunction", "GetLeaderboardData", folder)
+Remotes.LeaderboardUpdated = getOrCreate("RemoteEvent", "LeaderboardUpdated", folder)
+
 -- Player data sync
 Remotes.GetPlayerData = getOrCreate("RemoteFunction", "GetPlayerData", folder)
 

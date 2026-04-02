@@ -57,6 +57,7 @@ local function endBattle(winner, loser)
 
 	if winnerData then
 		PlayerDataManager.AddFoodLevel(winner, stolenFood)
+		PlayerDataManager.AddDuelWin(winner)
 	end
 
 	-- Notify both players
