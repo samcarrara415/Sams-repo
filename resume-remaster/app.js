@@ -1,6 +1,5 @@
-// ── PDF.js worker setup ──────────────────────────────────────────
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// ── PDF.js: disable worker to avoid cross-origin issues on iOS/Safari ──
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 // ── State ────────────────────────────────────────────────────────
 let uploadedFile = null;
@@ -145,7 +144,8 @@ async function extractText(file) {
 
 async function extractPDF(file) {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  // disableWorker avoids cross-origin worker restrictions on iOS Safari
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
   let text = '';
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -197,7 +197,7 @@ Return only the fully remastered resume text, properly formatted and ready to us
       'anthropic-dangerous-allow-browser': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -241,12 +241,28 @@ remasterBtn.addEventListener('click', async () => {
   outputSection.classList.remove('visible');
 
   try {
-    const resumeText = await extractText(uploadedFile);
-    if (!resumeText || resumeText.length < 50) {
-      throw new Error('Could not extract enough text from the file. Make sure the document contains selectable text.');
+    let resumeText;
+    try {
+      resumeText = await extractText(uploadedFile);
+    } catch (e) {
+      throw new Error('Could not read the file. Make sure it is a valid PDF or DOCX with selectable text. (' + (e.message || 'parse error') + ')');
     }
 
-    const result = await callClaude(resumeText, jobType, notesInput.value, apiKey);
+    if (!resumeText || resumeText.length < 50) {
+      throw new Error('Not enough text found in the file. Make sure your PDF has selectable text (not a scanned image).');
+    }
+
+    let result;
+    try {
+      result = await callClaude(resumeText, jobType, notesInput.value, apiKey);
+    } catch (e) {
+      const msg = e.message || '';
+      if (msg.toLowerCase().includes('load failed') || msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network')) {
+        throw new Error('Network error reaching the Anthropic API. Check your internet connection, or your API key may be invalid.');
+      }
+      throw new Error('API error: ' + msg);
+    }
+
     resumeOutput.textContent = result;
     outputSection.classList.add('visible');
     outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
