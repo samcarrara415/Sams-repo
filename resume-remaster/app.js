@@ -286,7 +286,10 @@ async function runSubscriptionMode(jobType) {
 
     builtPrompt = buildPrompt(resumeText, jobType, notesInput.value);
 
-    await copyToClipboard(builtPrompt);
+    // Show the prompt in the textarea so the user can copy it
+    document.getElementById('prompt-preview').value = builtPrompt;
+    // Reset copy button label
+    copyPromptAgain.innerHTML = '&#128203; Copy prompt';
 
     subscriptionPanel.style.display = 'block';
     subscriptionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
