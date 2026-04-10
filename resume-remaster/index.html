@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resume Remaster</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; connect-src https://api.anthropic.com; worker-src blob: 'none';">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,27 +15,53 @@
 
   <main>
 
-    <!-- Step 1: API Key -->
+    <!-- Step 1: Mode selector -->
     <div class="card">
       <div class="card-header">
         <div class="step-badge">1</div>
-        <h2>Anthropic API Key</h2>
+        <h2>How do you want to run it?</h2>
       </div>
       <div class="card-body">
-        <div class="api-key-wrapper">
-          <input
-            type="password"
-            id="api-key"
-            placeholder="sk-ant-api03-..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <span class="key-status" id="key-status"></span>
+        <div class="mode-toggle">
+          <label class="mode-option" id="mode-subscription-label">
+            <input type="radio" name="mode" value="subscription" id="mode-subscription" checked />
+            <div class="mode-box">
+              <span class="mode-icon">⭐</span>
+              <div>
+                <div class="mode-title">Claude.ai Subscription</div>
+                <div class="mode-desc">Builds a prompt &amp; opens Claude.ai — use your existing Pro or free plan</div>
+              </div>
+            </div>
+          </label>
+          <label class="mode-option" id="mode-api-label">
+            <input type="radio" name="mode" value="api" id="mode-api" />
+            <div class="mode-box">
+              <span class="mode-icon">🔑</span>
+              <div>
+                <div class="mode-title">Anthropic API Key</div>
+                <div class="mode-desc">Calls the API directly and shows the result on this page</div>
+              </div>
+            </div>
+          </label>
         </div>
-        <p class="api-key-note">
-          Your key is saved only in your browser and sent directly to Anthropic.
-          Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
-        </p>
+
+        <!-- API key input — only shown in API mode -->
+        <div id="api-key-section" style="display:none; margin-top:16px">
+          <div class="api-key-wrapper">
+            <input
+              type="password"
+              id="api-key"
+              placeholder="sk-ant-api03-..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <span class="key-status" id="key-status"></span>
+          </div>
+          <p class="api-key-note">
+            Your key is saved only in your browser and sent directly to Anthropic.
+            Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -180,11 +205,38 @@
 
     <!-- Action -->
     <button class="btn-remaster" id="remaster-btn">
-      <span id="btn-label">✨ Remaster My Resume</span>
+      <span id="btn-label">⭐ Build Prompt &amp; Open Claude.ai</span>
     </button>
 
-    <!-- Output -->
-    <div class="card" id="output-section">
+    <!-- Subscription success panel -->
+    <div class="card" id="subscription-panel" style="display:none">
+      <div class="card-header" style="background:#f0fdf4; border-bottom-color:#86efac">
+        <span style="font-size:1.4rem">✅</span>
+        <div>
+          <h2 style="color:#166534">Prompt copied to clipboard!</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <p style="margin-bottom:16px; color:#374151; font-size:0.93rem">
+          Your personalised resume prompt is in your clipboard. Click below to open Claude.ai, then just paste it in.
+        </p>
+        <a
+          href="https://claude.ai/new"
+          target="_blank"
+          rel="noopener"
+          class="btn-claude-ai"
+          id="open-claude-btn"
+        >
+          Open Claude.ai and paste ↗
+        </a>
+        <div style="margin-top:14px">
+          <button class="btn-action" id="copy-prompt-again">&#128203; Copy prompt again</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Output -->
+    <div class="card" id="output-section" style="display:none">
       <div class="output-toolbar">
         <h2>&#127775; Remastered Resume</h2>
         <div class="output-actions">
@@ -200,7 +252,7 @@
   </main>
 
   <footer>
-    Resume Remaster &mdash; your API key never leaves your browser.
+    Resume Remaster &mdash; your resume never leaves your browser.
   </footer>
 
   <!-- Libraries -->

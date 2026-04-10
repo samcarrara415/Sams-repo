@@ -3,25 +3,50 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 // ── State ────────────────────────────────────────────────────────
 let uploadedFile = null;
+let builtPrompt  = '';
 
 // ── DOM refs ─────────────────────────────────────────────────────
-const apiKeyInput   = document.getElementById('api-key');
-const keyStatus     = document.getElementById('key-status');
-const dropZone      = document.getElementById('drop-zone');
-const fileInput     = document.getElementById('file-input');
-const fileInfo      = document.getElementById('file-info');
-const fileName      = document.getElementById('file-name');
-const fileSize      = document.getElementById('file-size');
-const removeFileBtn = document.getElementById('remove-file');
-const moreJobsSelect = document.getElementById('more-jobs');
-const notesInput    = document.getElementById('notes');
-const remasterBtn   = document.getElementById('remaster-btn');
-const btnLabel      = document.getElementById('btn-label');
-const errorBox      = document.getElementById('error-box');
-const outputSection = document.getElementById('output-section');
-const resumeOutput  = document.getElementById('resume-output');
-const copyBtn       = document.getElementById('copy-btn');
-const downloadBtn   = document.getElementById('download-btn');
+const modeSubscription  = document.getElementById('mode-subscription');
+const modeApi           = document.getElementById('mode-api');
+const apiKeySection     = document.getElementById('api-key-section');
+const apiKeyInput       = document.getElementById('api-key');
+const keyStatus         = document.getElementById('key-status');
+const dropZone          = document.getElementById('drop-zone');
+const fileInput         = document.getElementById('file-input');
+const fileInfo          = document.getElementById('file-info');
+const fileName          = document.getElementById('file-name');
+const fileSize          = document.getElementById('file-size');
+const removeFileBtn     = document.getElementById('remove-file');
+const moreJobsSelect    = document.getElementById('more-jobs');
+const notesInput        = document.getElementById('notes');
+const remasterBtn       = document.getElementById('remaster-btn');
+const btnLabel          = document.getElementById('btn-label');
+const errorBox          = document.getElementById('error-box');
+const subscriptionPanel = document.getElementById('subscription-panel');
+const copyPromptAgain   = document.getElementById('copy-prompt-again');
+const outputSection     = document.getElementById('output-section');
+const resumeOutput      = document.getElementById('resume-output');
+const copyBtn           = document.getElementById('copy-btn');
+const downloadBtn       = document.getElementById('download-btn');
+
+// ── Mode toggle ───────────────────────────────────────────────────
+function getMode() {
+  return modeApi.checked ? 'api' : 'subscription';
+}
+
+function syncModeUI() {
+  const isApi = getMode() === 'api';
+  apiKeySection.style.display = isApi ? 'block' : 'none';
+  btnLabel.textContent = isApi
+    ? '✨ Remaster My Resume'
+    : '⭐ Build Prompt & Open Claude.ai';
+  subscriptionPanel.style.display = 'none';
+  outputSection.style.display = 'none';
+  hideError();
+}
+
+modeSubscription.addEventListener('change', syncModeUI);
+modeApi.addEventListener('change', syncModeUI);
 
 // ── API Key persistence ───────────────────────────────────────────
 const SAVED_KEY = 'resumeRemaster_apiKey';
@@ -106,18 +131,15 @@ function formatBytes(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
-// ── Job selection (radio + select combo) ─────────────────────────
+// ── Job selection ─────────────────────────────────────────────────
 function getSelectedJob() {
-  // Check radio buttons first
   const checked = document.querySelector('input[name="job"]:checked');
-  if (checked && checked.value !== 'other') return checked.value;
-  // Fall back to dropdown
+  if (checked) return checked.value;
   const ddVal = moreJobsSelect.value;
   if (ddVal) return ddVal;
   return null;
 }
 
-// Deselect radio when dropdown is changed
 moreJobsSelect.addEventListener('change', () => {
   if (moreJobsSelect.value) {
     const checked = document.querySelector('input[name="job"]:checked');
@@ -125,12 +147,9 @@ moreJobsSelect.addEventListener('change', () => {
   }
 });
 
-// Deselect dropdown when radio is selected
 document.querySelectorAll('input[name="job"]').forEach(radio => {
   radio.addEventListener('change', () => {
-    if (radio.checked && radio.value !== 'other') {
-      moreJobsSelect.value = '';
-    }
+    if (radio.checked) moreJobsSelect.value = '';
   });
 });
 
@@ -162,13 +181,13 @@ async function extractDOCX(file) {
   return result.value.trim();
 }
 
-// ── Claude API call ───────────────────────────────────────────────
-async function callClaude(resumeText, jobType, notes, apiKey) {
+// ── Prompt builder ────────────────────────────────────────────────
+function buildPrompt(resumeText, jobType, notes) {
   const noteSection = notes.trim()
-    ? `\n\nAdditional instructions from the user:\n${notes.trim()}`
+    ? `\n\nAdditional instructions:\n${notes.trim()}`
     : '';
 
-  const prompt = `You are an expert professional resume writer specializing in tailoring resumes for specific roles.
+  return `You are an expert professional resume writer specializing in tailoring resumes for specific roles.
 
 Remaster the resume below to be highly optimized for a **${jobType}** position.
 
@@ -187,7 +206,10 @@ ${resumeText}
 ---
 
 Return only the fully remastered resume text, properly formatted and ready to use:`;
+}
 
+// ── Claude API call ───────────────────────────────────────────────
+async function callClaude(prompt, apiKey) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -219,12 +241,8 @@ Return only the fully remastered resume text, properly formatted and ready to us
 // ── Main action ───────────────────────────────────────────────────
 remasterBtn.addEventListener('click', async () => {
   hideError();
-
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) {
-    showError('Please enter your Anthropic API key in Step 1.');
-    return;
-  }
+  subscriptionPanel.style.display = 'none';
+  outputSection.style.display = 'none';
 
   if (!uploadedFile) {
     showError('Please upload a PDF or DOCX resume in Step 2.');
@@ -237,8 +255,22 @@ remasterBtn.addEventListener('click', async () => {
     return;
   }
 
-  setLoading(true);
-  outputSection.classList.remove('visible');
+  const mode = getMode();
+
+  if (mode === 'api') {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+      showError('Please enter your Anthropic API key.');
+      return;
+    }
+    await runApiMode(jobType, apiKey);
+  } else {
+    await runSubscriptionMode(jobType);
+  }
+});
+
+async function runSubscriptionMode(jobType) {
+  setLoading(true, '⭐ Building prompt...');
 
   try {
     let resumeText;
@@ -252,47 +284,97 @@ remasterBtn.addEventListener('click', async () => {
       throw new Error('Not enough text found in the file. Make sure your PDF has selectable text (not a scanned image).');
     }
 
-    let result;
-    try {
-      result = await callClaude(resumeText, jobType, notesInput.value, apiKey);
-    } catch (e) {
-      const msg = e.message || '';
-      if (msg.toLowerCase().includes('load failed') || msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network')) {
-        throw new Error('Network error reaching the Anthropic API. Check your internet connection, or your API key may be invalid.');
-      }
-      throw new Error('API error: ' + msg);
-    }
+    builtPrompt = buildPrompt(resumeText, jobType, notesInput.value);
 
-    resumeOutput.textContent = result;
-    outputSection.classList.add('visible');
-    outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    await copyToClipboard(builtPrompt);
+
+    subscriptionPanel.style.display = 'block';
+    subscriptionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   } catch (err) {
     showError(err.message || 'Something went wrong. Please try again.');
   } finally {
     setLoading(false);
   }
-});
+}
 
-// ── Copy ──────────────────────────────────────────────────────────
-copyBtn.addEventListener('click', async () => {
-  const text = resumeOutput.textContent;
+async function runApiMode(jobType, apiKey) {
+  setLoading(true, '✨ Remastering...');
+
+  try {
+    let resumeText;
+    try {
+      resumeText = await extractText(uploadedFile);
+    } catch (e) {
+      throw new Error('Could not read the file. Make sure it is a valid PDF or DOCX with selectable text. (' + (e.message || 'parse error') + ')');
+    }
+
+    if (!resumeText || resumeText.length < 50) {
+      throw new Error('Not enough text found in the file. Make sure your PDF has selectable text (not a scanned image).');
+    }
+
+    const prompt = buildPrompt(resumeText, jobType, notesInput.value);
+
+    let result;
+    try {
+      result = await callClaude(prompt, apiKey);
+    } catch (e) {
+      const msg = e.message || '';
+      if (msg.toLowerCase().includes('load failed') || msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network')) {
+        throw new Error('Network error reaching the Anthropic API. Check your connection or verify your API key.');
+      }
+      throw new Error('API error: ' + msg);
+    }
+
+    resumeOutput.textContent = result;
+    outputSection.style.display = 'block';
+    outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (err) {
+    showError(err.message || 'Something went wrong. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Clipboard ─────────────────────────────────────────────────────
+async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
-    copyBtn.textContent = '✓ Copied!';
-    copyBtn.classList.add('copied');
-    setTimeout(() => {
-      copyBtn.innerHTML = '&#128203; Copy';
-      copyBtn.classList.remove('copied');
-    }, 2000);
   } catch (_) {
-    showError('Could not copy to clipboard. Please select and copy manually.');
+    // Fallback for browsers that block clipboard without user gesture
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
   }
+}
+
+copyPromptAgain.addEventListener('click', async () => {
+  await copyToClipboard(builtPrompt);
+  copyPromptAgain.textContent = '✓ Copied!';
+  setTimeout(() => { copyPromptAgain.innerHTML = '&#128203; Copy prompt again'; }, 2000);
 });
 
-// ── Download ──────────────────────────────────────────────────────
-downloadBtn.addEventListener('click', () => {
+// ── API output copy / download ────────────────────────────────────
+copyBtn.addEventListener('click', async () => {
   const text = resumeOutput.textContent;
-  const blob = new Blob([text], { type: 'text/plain' });
+  await copyToClipboard(text);
+  copyBtn.textContent = '✓ Copied!';
+  copyBtn.classList.add('copied');
+  setTimeout(() => {
+    copyBtn.innerHTML = '&#128203; Copy';
+    copyBtn.classList.remove('copied');
+  }, 2000);
+});
+
+downloadBtn.addEventListener('click', () => {
+  const blob = new Blob([resumeOutput.textContent], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -302,12 +384,13 @@ downloadBtn.addEventListener('click', () => {
 });
 
 // ── Helpers ───────────────────────────────────────────────────────
-function setLoading(loading) {
+function setLoading(loading, label) {
   remasterBtn.disabled = loading;
   if (loading) {
-    remasterBtn.innerHTML = '<div class="spinner"></div><span>Remastering...</span>';
+    remasterBtn.innerHTML = `<div class="spinner"></div><span>${label}</span>`;
   } else {
-    remasterBtn.innerHTML = '<span id="btn-label">✨ Remaster My Resume</span>';
+    syncModeUI(); // restore correct label
+    remasterBtn.disabled = false;
   }
 }
 
