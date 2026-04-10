@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sam's Projects</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #a5b4fc, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      margin-bottom: 48px;
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    a.card {
+      display: block;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 28px 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s;
+    }
+
+    a.card:hover {
+      border-color: #818cf8;
+      background: #1e2a45;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(129, 140, 248, 0.15);
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 14px;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #f1f5f9;
+    }
+
+    .card p {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+      background: #312e81;
+      color: #a5b4fc;
+      letter-spacing: 0.3px;
+    }
+
+    footer {
+      margin-top: 48px;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Sam's Projects</h1>
+  <p class="subtitle">A collection of web tools and games</p>
+
+  <div class="grid">
+
+    <a class="card" href="resume-remaster/">
+      <div class="card-icon">✨</div>
+      <h2>Resume Remaster</h2>
+      <p>Upload a PDF or DOCX resume and let AI rewrite it for any target job role.</p>
+      <span class="tag">AI Tool</span>
+    </a>
+
+    <a class="card" href="WEB%20trivia%20game%20about%20my%20college/">
+      <div class="card-icon">🎓</div>
+      <h2>College Trivia</h2>
+      <p>A web trivia game all about college knowledge and campus life.</p>
+      <span class="tag">Game</span>
+    </a>
+
+  </div>
+
+  <footer>github.com/samcarrara415</footer>
+
+</body>
+</html>
