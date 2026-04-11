@@ -154,15 +154,31 @@ document.querySelectorAll('input[name="job"]').forEach(radio => {
 });
 
 // ── Text extraction ───────────────────────────────────────────────
+function readFileAsArrayBuffer(file) {
+  // Use FileReader instead of file.arrayBuffer() — more reliable on iOS Safari
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function withTimeout(promise, ms, msg) {
+  const timer = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(msg)), ms)
+  );
+  return Promise.race([promise, timer]);
+}
+
 async function extractText(file) {
   const ext = file.name.split('.').pop().toLowerCase();
-  if (ext === 'pdf') return extractPDF(file);
-  if (ext === 'docx') return extractDOCX(file);
-  throw new Error('Unsupported file type');
+  const extraction = ext === 'pdf' ? extractPDF(file) : extractDOCX(file);
+  return withTimeout(extraction, 30000, 'File processing timed out after 30 seconds. Try a smaller file or convert to DOCX.');
 }
 
 async function extractPDF(file) {
-  const arrayBuffer = await file.arrayBuffer();
+  const arrayBuffer = await readFileAsArrayBuffer(file);
   // disableWorker avoids cross-origin worker restrictions on iOS Safari
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
   let text = '';
@@ -176,7 +192,7 @@ async function extractPDF(file) {
 }
 
 async function extractDOCX(file) {
-  const arrayBuffer = await file.arrayBuffer();
+  const arrayBuffer = await readFileAsArrayBuffer(file);
   const result = await mammoth.extractRawText({ arrayBuffer });
   return result.value.trim();
 }
