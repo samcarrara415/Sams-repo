@@ -13,9 +13,28 @@ const painPoints = [
   { emoji: '😓', text: 'Not knowing how to phrase what you actually do' },
 ];
 
-async function getReviews() {
+type Review = {
+  rating: number;
+  comment: string;
+  display_name: string | null;
+  job_type: string;
+  unlock_method: 'single' | 'monthly' | 'promo' | null;
+  purchased_at: string | null;
+};
+
+const PACKAGE_LABELS: Record<string, string> = {
+  single:  'Single Resume · $2',
+  monthly: 'Monthly Plan · $8/mo',
+  promo:   'Free Access',
+};
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+async function getReviews(): Promise<Review[]> {
   try {
-    // Fetch reviews server-side from Supabase directly
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,12 +42,12 @@ async function getReviews() {
     );
     const { data } = await supabase
       .from('reviews')
-      .select('rating, comment, job_type, created_at')
+      .select('rating, comment, display_name, job_type, unlock_method, purchased_at')
       .gte('rating', 4)
       .not('comment', 'is', null)
-      .order('created_at', { ascending: false })
+      .order('purchased_at', { ascending: false })
       .limit(6);
-    return data || [];
+    return (data as Review[]) || [];
   } catch {
     return [];
   }
@@ -109,20 +128,44 @@ export default async function LandingPage() {
           <h2 className="text-2xl font-black text-center mb-2 text-slate-800">Real people. Real results.</h2>
           <p className="text-slate-500 text-center mb-10 text-sm">Every review is from a verified user who unlocked a remastered resume.</p>
           <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-            {reviews.map((r: { rating: number; comment: string; job_type: string; created_at: string }, i: number) => (
-              <div key={i} className="card p-5">
-                <div className="flex items-center gap-1 mb-3">
+            {reviews.map((r: Review, i: number) => (
+              <div key={i} className="card p-5 flex flex-col">
+                {/* Stars */}
+                <div className="flex items-center gap-0.5 mb-3">
                   {[1,2,3,4,5].map(s => (
                     <span key={s} className={s <= r.rating ? 'text-yellow-400' : 'text-slate-200'}>★</span>
                   ))}
                 </div>
-                <p className="text-slate-700 text-sm leading-relaxed mb-4 italic">&ldquo;{r.comment}&rdquo;</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">{r.job_type}</span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+
+                {/* Comment */}
+                <p className="text-slate-700 text-sm leading-relaxed mb-4 italic flex-1">&ldquo;{r.comment}&rdquo;</p>
+
+                {/* Name + verified */}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-sm text-slate-800">
+                    {r.display_name || 'Anonymous'}
+                  </span>
+                  <span className="text-xs text-green-600 flex items-center gap-1 font-medium">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
                     Verified user
                   </span>
+                </div>
+
+                {/* Meta row */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <span className="text-xs font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">
+                    {r.job_type}
+                  </span>
+                  <div className="text-right">
+                    {r.unlock_method && (
+                      <p className="text-xs text-slate-500 font-medium">
+                        {PACKAGE_LABELS[r.unlock_method] ?? r.unlock_method}
+                      </p>
+                    )}
+                    {r.purchased_at && (
+                      <p className="text-xs text-slate-400">{formatDate(r.purchased_at)}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

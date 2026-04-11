@@ -28,11 +28,13 @@ export async function POST(request: NextRequest) {
 
     if (!userId) return NextResponse.json({ received: true });
 
+    const now = new Date().toISOString();
+
     if (session.mode === 'payment' && resumeId) {
-      // One-time purchase — unlock the specific resume
+      // One-time $2 purchase — unlock the specific resume
       await supabase
         .from('resumes')
-        .update({ is_unlocked: true, stripe_session_id: session.id })
+        .update({ is_unlocked: true, stripe_session_id: session.id, unlock_method: 'single', unlocked_at: now })
         .eq('id', resumeId)
         .eq('user_id', userId);
     }
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
       if (resumeId) {
         await supabase
           .from('resumes')
-          .update({ is_unlocked: true, stripe_session_id: session.id })
+          .update({ is_unlocked: true, stripe_session_id: session.id, unlock_method: 'monthly', unlocked_at: now })
           .eq('id', resumeId)
           .eq('user_id', userId);
       }

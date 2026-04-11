@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Code already redeemed. Please try another.' }, { status: 400 });
   }
 
-  // Unlock the resume
+  // Unlock the resume and record method + timestamp
   await adminSupabase
     .from('resumes')
-    .update({ is_unlocked: true })
+    .update({ is_unlocked: true, unlock_method: 'promo', unlocked_at: new Date().toISOString() })
     .eq('id', resumeId)
     .eq('user_id', user.id);
 

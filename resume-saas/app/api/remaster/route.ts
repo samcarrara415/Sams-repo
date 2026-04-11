@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
     const previewText = createPreview(fullText);
 
     // Store in DB
+    const now = new Date().toISOString();
     const { data: resume, error: dbError } = await supabase
       .from('resumes')
       .insert({
@@ -108,7 +109,9 @@ export async function POST(request: NextRequest) {
         job_type: jobType,
         preview_text: previewText,
         full_text: fullText,
-        is_unlocked: isSubscribed, // subscribers get it free
+        is_unlocked: isSubscribed,
+        unlock_method: isSubscribed ? 'monthly' : null,
+        unlocked_at: isSubscribed ? now : null,
       })
       .select('id, is_unlocked')
       .single();

@@ -16,13 +16,13 @@ export default function SuccessPage() {
   // Review state
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
+  const [displayName, setDisplayName] = useState('');
   const [comment, setComment] = useState('');
   const [reviewed, setReviewed] = useState(false);
   const [reviewSending, setReviewSending] = useState(false);
 
   useEffect(() => {
     if (!sessionId) { router.replace('/dashboard'); return; }
-    // Poll until the resume is unlocked (webhook may take a second)
     let attempts = 0;
     async function poll() {
       const supabase = createClient();
@@ -37,7 +37,7 @@ export default function SuccessPage() {
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (resumes && resumes.length > 0 && resumes[0].is_unlocked) {
+      if (resumes && resumes.length > 0) {
         setFullText(resumes[0].full_text);
         setResumeId(resumes[0].id);
         setStatus('ready');
@@ -57,17 +57,10 @@ export default function SuccessPage() {
     await fetch('/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeId, rating, comment }),
+      body: JSON.stringify({ resumeId, rating, comment, displayName: displayName.trim() }),
     });
     setReviewed(true);
     setReviewSending(false);
-  }
-
-  function copyText() {
-    navigator.clipboard.writeText(fullText).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
   }
 
   if (status === 'loading') {
@@ -94,7 +87,6 @@ export default function SuccessPage() {
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
 
-        {/* Header */}
         <div className="text-center">
           <p className="text-4xl mb-2">🎉</p>
           <h1 className="text-2xl font-black text-slate-900">Your remastered resume is ready!</h1>
@@ -106,13 +98,12 @@ export default function SuccessPage() {
           <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50">
             <span className="font-semibold text-slate-700">✨ Full Resume</span>
             <div className="flex gap-2">
-              <button onClick={copyText} className="btn-secondary py-1.5 px-3 text-sm">
+              <button onClick={() => { navigator.clipboard.writeText(fullText); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="btn-secondary py-1.5 px-3 text-sm">
                 {copied ? '✓ Copied' : '📋 Copy'}
               </button>
               <button onClick={() => {
-                const blob = new Blob([fullText], { type: 'text/plain' });
                 const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
+                a.href = URL.createObjectURL(new Blob([fullText], { type: 'text/plain' }));
                 a.download = 'remastered-resume.txt';
                 a.click();
               }} className="btn-secondary py-1.5 px-3 text-sm">⬇ Download</button>
@@ -124,31 +115,47 @@ export default function SuccessPage() {
         {/* Review prompt */}
         <div className="card p-6">
           {reviewed ? (
-            <p className="text-center text-green-700 font-semibold">Thanks for your review! ⭐</p>
+            <div className="text-center">
+              <p className="text-2xl mb-2">⭐</p>
+              <p className="text-green-700 font-semibold">Thanks for your review!</p>
+              <p className="text-slate-500 text-sm mt-1">It&apos;ll show up on our homepage to help others.</p>
+            </div>
           ) : (
             <>
               <h2 className="font-bold text-slate-800 mb-1">How did we do?</h2>
-              <p className="text-sm text-slate-500 mb-4">Rate your experience — it helps others find us.</p>
-              <div className="flex gap-1 mb-4">
+              <p className="text-sm text-slate-500 mb-5">Your review shows on our homepage as a verified user — helps others decide.</p>
+
+              {/* Stars */}
+              <div className="flex gap-1 mb-5">
                 {[1, 2, 3, 4, 5].map(star => (
                   <button
                     key={star}
                     onMouseEnter={() => setHover(star)}
                     onMouseLeave={() => setHover(0)}
                     onClick={() => setRating(star)}
-                    className={`text-3xl transition-transform hover:scale-110 ${
-                      star <= (hover || rating) ? 'text-yellow-400' : 'text-slate-200'
-                    }`}
+                    className={`text-3xl transition-transform hover:scale-110 ${star <= (hover || rating) ? 'text-yellow-400' : 'text-slate-200'}`}
                   >★</button>
                 ))}
               </div>
-              <textarea
+
+              {/* Name */}
+              <input
                 className="input mb-3"
+                placeholder="Your first name (shown publicly, e.g. Sarah M.)"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                maxLength={40}
+              />
+
+              {/* Comment */}
+              <textarea
+                className="input mb-4"
                 rows={3}
-                placeholder="Optional comment — what did you think? (shown publicly)"
+                placeholder="What did you think? Did it help with your job search? (optional)"
                 value={comment}
                 onChange={e => setComment(e.target.value)}
               />
+
               <button
                 className="btn-primary"
                 onClick={submitReview}
@@ -156,6 +163,7 @@ export default function SuccessPage() {
               >
                 {reviewSending ? 'Sending…' : 'Submit review'}
               </button>
+              {rating === 0 && <p className="text-xs text-slate-400 mt-2">Select a star rating to submit.</p>}
             </>
           )}
         </div>

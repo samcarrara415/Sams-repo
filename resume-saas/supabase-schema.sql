@@ -17,6 +17,8 @@ create table public.resumes (
   preview_text text not null,
   full_text text not null,
   is_unlocked boolean not null default false,
+  unlock_method text check (unlock_method in ('single', 'monthly', 'promo')),
+  unlocked_at timestamptz,
   stripe_session_id text,
   created_at timestamptz default now() not null
 );
@@ -28,7 +30,10 @@ create table public.reviews (
   resume_id uuid references public.resumes on delete cascade not null,
   rating integer not null check (rating >= 1 and rating <= 5),
   comment text,
+  display_name text,
   job_type text,
+  unlock_method text,
+  purchased_at timestamptz,
   created_at timestamptz default now() not null
 );
 

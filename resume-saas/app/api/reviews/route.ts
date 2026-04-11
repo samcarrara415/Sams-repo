@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 
-// POST — submit a review (must own an unlocked resume)
 export async function POST(request: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { resumeId, rating, comment } = await request.json() as {
-    resumeId: string; rating: number; comment?: string;
+  const { resumeId, rating, comment, displayName } = await request.json() as {
+    resumeId: string; rating: number; comment?: string; displayName?: string;
   };
 
   if (!resumeId || rating < 1 || rating > 5) {
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
   // Verify user owns an unlocked resume
   const { data: resume } = await supabase
     .from('resumes')
-    .select('id, job_type, is_unlocked')
+    .select('id, job_type, is_unlocked, unlock_method, unlocked_at')
     .eq('id', resumeId)
     .eq('user_id', user.id)
     .eq('is_unlocked', true)
@@ -31,20 +30,21 @@ export async function POST(request: NextRequest) {
     resume_id: resumeId,
     rating,
     comment: comment?.trim() || null,
+    display_name: displayName?.trim() || null,
     job_type: resume.job_type,
+    unlock_method: resume.unlock_method,
+    purchased_at: resume.unlocked_at,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
 
-// GET — fetch public reviews for the landing page
 export async function GET() {
-  // Use anon key — reviews are public read
   const supabase = createClient();
   const { data: reviews } = await supabase
     .from('reviews')
-    .select('rating, comment, job_type, created_at')
+    .select('rating, comment, display_name, job_type, unlock_method, purchased_at, created_at')
     .order('created_at', { ascending: false })
     .limit(20);
 
