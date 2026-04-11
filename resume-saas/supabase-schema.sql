@@ -55,6 +55,23 @@ create policy "Anyone can read reviews" on public.reviews
 create policy "Users can insert own reviews" on public.reviews
   for insert with check (auth.uid() = user_id);
 
+-- Promo codes table (one-time use)
+create table public.promo_codes (
+  id uuid default gen_random_uuid() primary key,
+  code text unique not null,
+  used_by uuid references auth.users,
+  used_at timestamptz,
+  created_at timestamptz default now() not null
+);
+
+alter table public.promo_codes enable row level security;
+
+-- Anyone authenticated can attempt to redeem (the API handles the logic)
+create policy "Authenticated users can read promo codes" on public.promo_codes
+  for select using (auth.uid() is not null);
+create policy "Authenticated users can update promo codes" on public.promo_codes
+  for update using (auth.uid() is not null);
+
 -- Auto-create profile row when a user signs up
 create or replace function public.handle_new_user()
 returns trigger as $$

@@ -40,6 +40,9 @@ export default function Dashboard() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -94,6 +97,28 @@ export default function Dashboard() {
       setError(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function redeemPromo() {
+    if (!promoCode.trim() || !resumeId) return;
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const res = await fetch('/api/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim(), resumeId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Invalid code');
+      setFullText(data.fullText);
+      setIsUnlocked(true);
+      setPromoCode('');
+    } catch (e: unknown) {
+      setPromoError(e instanceof Error ? e.message : 'Invalid code');
+    } finally {
+      setPromoLoading(false);
     }
   }
 
@@ -236,13 +261,35 @@ export default function Dashboard() {
                 <div className="h-24 bg-gradient-to-b from-transparent to-white -mt-24 relative z-10 pointer-events-none" />
                 <div className="px-5 pb-6 pt-2 bg-white text-center">
                   <p className="text-slate-600 text-sm mb-4 font-medium">Unlock the full remastered resume to copy &amp; download it.</p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mb-5">
                     <button onClick={() => checkout('single')} disabled={checkingOut} className="btn-primary">
                       {checkingOut ? 'Redirecting…' : '🔓 Unlock for $2'}
                     </button>
                     <button onClick={() => checkout('monthly')} disabled={checkingOut} className="btn-secondary">
                       ♾ $8/mo — Unlimited
                     </button>
+                  </div>
+
+                  {/* Promo code */}
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-slate-400 mb-2 text-center">Have a promo code?</p>
+                    <div className="flex gap-2 max-w-xs mx-auto">
+                      <input
+                        className="input text-sm uppercase tracking-widest"
+                        placeholder="FREE-XXXXXX"
+                        value={promoCode}
+                        onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                        onKeyDown={e => e.key === 'Enter' && redeemPromo()}
+                      />
+                      <button
+                        onClick={redeemPromo}
+                        disabled={promoLoading || !promoCode.trim()}
+                        className="btn-primary py-2 px-4 text-sm whitespace-nowrap"
+                      >
+                        {promoLoading ? '…' : 'Apply'}
+                      </button>
+                    </div>
+                    {promoError && <p className="text-red-500 text-xs text-center mt-2">{promoError}</p>}
                   </div>
                 </div>
               </div>
