@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { createWriteStream } from "node:fs";
 
 import { GeminiBrowser } from "./gemini-browser.js";
 import {
@@ -47,6 +48,32 @@ const QUESTIONS_DIR = path.join(OUTPUT_DIR, ".questions");
 const PROFILE_DIR = readArg("profile-dir");
 const IMAGE_DIR = path.join(OUTPUT_DIR, "generated-assets");
 const HEADLESS = readArg("headless", "false") === "true";
+
+// Debug log — claude doesn't reliably surface MCP server stderr to the user's
+// terminal, so we tee everything to <output-dir>/mcp-debug.log too.
+let debugStream: ReturnType<typeof createWriteStream> | null = null;
+function dbg(msg: string): void {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  process.stderr.write(line);
+  try {
+    debugStream ??= createWriteStream(path.join(OUTPUT_DIR, "mcp-debug.log"), { flags: "a" });
+    debugStream.write(line);
+  } catch {
+    // OUTPUT_DIR may not exist yet on the very first call; ignore.
+  }
+}
+
+// Make sure the output dir is on disk before anything else (so debug log
+// doesn't fail silently). Top-level await is fine in ESM.
+await fs.mkdir(OUTPUT_DIR, { recursive: true });
+dbg(`mcp-server starting. output=${OUTPUT_DIR} headless=${HEADLESS}`);
+
+process.on("uncaughtException", (err) => {
+  dbg(`uncaughtException: ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
+});
+process.on("unhandledRejection", (err) => {
+  dbg(`unhandledRejection: ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
+});
 
 // ─── shared state (single in-memory map) ─────────────────────────────────────
 
@@ -371,15 +398,22 @@ async function main() {
     { capabilities: { tools: {} } }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOL_DEFS }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    dbg(`tools/list requested → returning ${TOOL_DEFS.length} tools`);
+    return { tools: TOOL_DEFS };
+  });
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const name = req.params.name;
     const args = req.params.arguments ?? {};
+    dbg(`tools/call ${name} args=${JSON.stringify(args).slice(0, 200)}`);
     try {
-      return await dispatch(name, args);
+      const result = await dispatch(name, args);
+      dbg(`tools/call ${name} ok`);
+      return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      dbg(`tools/call ${name} ERROR: ${message}`);
       return {
         content: [{ type: "text" as const, text: `Error: ${message}` }],
         isError: true,
@@ -389,6 +423,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  dbg("connected to stdio transport, ready for requests");
 }
 
 main().catch((err) => {
