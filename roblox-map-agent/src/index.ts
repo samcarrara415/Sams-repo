@@ -22,15 +22,17 @@ Coordinate system:
 Materials available: Plastic, SmoothPlastic, Neon, Wood, WoodPlanks, Brick, Cobblestone, Concrete, Granite, Slate, Marble, Sand, Glass, Grass, Metal, DiamondPlate, CorrodedMetal, Pebble, Ice, Foil, Fabric. Prefer real materials over plain Plastic.
 
 Image generation rules:
-- Use mcp__roblox__generate_image for HERO art only: skybox faces, decals on signs/posters/billboards/murals.
-- DO NOT use it for ground or wall textures — they don't tile and show seams. Use Roblox built-in materials for those.
-- Skybox: 6 separate images (up, down, front, back, left, right). Each prompt should say "seamless skybox face, no horizon line, no sun, no clouds at edges, painted matte" plus the theme. For a stylized vibe you can reuse the same image on all 6 faces.
-- Decals: square aspect (the browser only emits one image per prompt; framing the prompt as "square poster, centered subject" works best).
+- mcp__roblox__generate_image is HUMAN-IN-THE-LOOP: it prints your prompt to the user's terminal, the user generates the image themselves (e.g. in Gemini), and provides a path to the saved PNG. Each call BLOCKS until the user supplies the image.
+- Be efficient with image requests — prefer ~5-10 hero images per map, never more than 15. Each one costs the user real time.
+- Use it for HERO art only: skybox faces, decals on signs/posters/billboards/murals. DO NOT use it for ground or wall textures.
+- Skybox: 6 separate images (up, down, front, back, left, right). Each prompt: "seamless skybox face, no horizon line, no sun, no clouds at edges, painted matte" plus the theme. For a stylized vibe you can reuse the same imageId on all 6 faces (call generate_image once, then pass the same id to set_skybox.up/down/front/back/left/right).
+- Decals: square aspect; phrase as "square poster, centered subject".
+- BATCH all your generate_image calls upfront in a sequence, before doing geometry. This way the user can generate them all at once instead of being interrupted between every part placement.
 
 Workflow:
 1. Briefly internalize the user's theme. If something fundamental is unclear (scale, vibe, must-have features), use mcp__roblox__ask_user — but only ONE round of questions, then commit and build.
 2. Plan a layout: 5-15 distinct landmarks/zones, spatially separated.
-3. Generate hero art FIRST (skybox + key decals).
+3. Request ALL hero images in a tight sequence (skybox + key decals) — let the user generate them, then proceed.
 4. Build geometry. Use mcp__roblox__place_model for groups (a building is a model; a tree is a model). Compound parts beat single giant primitives — a house is walls + roof + door + windows.
 5. Set the skybox (mcp__roblox__set_skybox) and ambient color (mcp__roblox__set_ambient_light).
 6. Call mcp__roblox__finalize_map with a short summary.
@@ -81,36 +83,85 @@ function getFlag(name: string): string | undefined {
   return undefined;
 }
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
+
+function normalizePath(input: string): string {
+  // Mac drag-and-drop into Terminal can produce: "/path/with spaces/file.png",
+  // /path/with\ spaces/file.png, or 'file.png'. Strip wrapping quotes and
+  // unescape spaces.
+  let s = input.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1);
+  }
+  s = s.replace(/\\ /g, " ");
+  if (s.startsWith("~/")) s = path.join(process.env.HOME ?? "", s.slice(2));
+  return path.resolve(s);
 }
 
-async function watchQuestions(questionsDir: string, signal: AbortSignal): Promise<void> {
-  await fs.mkdir(questionsDir, { recursive: true });
+async function watchRequests(requestsDir: string, signal: AbortSignal): Promise<void> {
+  await fs.mkdir(requestsDir, { recursive: true });
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const handled = new Set<string>();
 
   while (!signal.aborted) {
     let entries: string[] = [];
     try {
-      entries = await fs.readdir(questionsDir);
+      entries = await fs.readdir(requestsDir);
     } catch {
       // dir might not exist yet
     }
-    for (const file of entries) {
-      if (!file.endsWith(".q.txt") || handled.has(file)) continue;
-      const stem = file.replace(/\.q\.txt$/, "");
+    for (const file of entries.sort()) {
+      if (!file.endsWith(".req.json") || handled.has(file)) continue;
+      const stem = file.replace(/\.req\.json$/, "");
       handled.add(file);
-      const qPath = path.join(questionsDir, file);
-      const aPath = path.join(questionsDir, `${stem}.a.txt`);
+      const reqPath = path.join(requestsDir, file);
+      const resPath = path.join(requestsDir, `${stem}.res.txt`);
+
+      let req: any;
       try {
-        const question = (await fs.readFile(qPath, "utf8")).trim();
-        process.stdout.write(`\n[agent asks] ${question}\n`);
-        const answer = await rl.question("> ");
-        await fs.writeFile(aPath, answer, "utf8");
-      } catch (err) {
-        // If the question file disappears or the answer write fails, ignore;
-        // the MCP server will time out on its own.
+        req = JSON.parse(await fs.readFile(reqPath, "utf8"));
+      } catch {
+        continue;
+      }
+
+      let response = "";
+      try {
+        if (req.type === "ask_user") {
+          process.stdout.write(`\n[agent asks] ${req.question}\n`);
+          response = await rl.question("> ");
+        } else if (req.type === "generate_image") {
+          process.stdout.write(`\n────────────────────────────────────────────────────────────\n`);
+          process.stdout.write(` IMAGE NEEDED — id: ${req.id}\n`);
+          process.stdout.write(`────────────────────────────────────────────────────────────\n`);
+          process.stdout.write(` Generate this image (e.g. in Gemini), save the PNG, then\n`);
+          process.stdout.write(` drag the file into this terminal and press Enter.\n\n`);
+          process.stdout.write(` Prompt:\n`);
+          for (const ln of String(req.prompt).split("\n")) process.stdout.write(`   ${ln}\n`);
+          process.stdout.write(`────────────────────────────────────────────────────────────\n`);
+          while (true) {
+            const raw = await rl.question("path> ");
+            if (!raw.trim()) {
+              process.stdout.write("(empty — drag the saved file here, or paste its path)\n");
+              continue;
+            }
+            const resolved = normalizePath(raw);
+            try {
+              const stat = await fs.stat(resolved);
+              if (!stat.isFile()) {
+                process.stdout.write(`Not a file: ${resolved}\n`);
+                continue;
+              }
+              response = resolved;
+              break;
+            } catch {
+              process.stdout.write(`Couldn't find: ${resolved}\nTry again:\n`);
+            }
+          }
+        } else {
+          continue; // unknown type
+        }
+        await fs.writeFile(resPath, response, "utf8");
+      } catch {
+        // ignore — MCP server will time out gracefully
       }
     }
     await new Promise((r) => setTimeout(r, 300));
@@ -192,19 +243,15 @@ async function main() {
   checkClaudeAvailable();
   const prompt = getPrompt();
   const model = getFlag("model") ?? "sonnet";
-  const headless = hasFlag("headless");
 
-  // Project root = parent of dist/ or src/, depending on how it ran.
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const projectRoot = path.resolve(here, "..");
-  const profileDir = path.join(projectRoot, ".gemini-profile");
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const outputDir = path.resolve("output", stamp);
   const imageDir = path.join(outputDir, "generated-assets");
-  const questionsDir = path.join(outputDir, ".questions");
+  const requestsDir = path.join(outputDir, ".requests");
   await fs.mkdir(imageDir, { recursive: true });
-  await fs.mkdir(questionsDir, { recursive: true });
+  await fs.mkdir(requestsDir, { recursive: true });
 
   // Locate the MCP server entry. Use tsx if running from src/, node if from dist/.
   const isTs = here.endsWith("src");
@@ -213,8 +260,8 @@ async function main() {
     : path.join(here, "mcp-server.js");
   const mcpCommand = isTs ? "npx" : "node";
   const mcpArgs = isTs
-    ? ["tsx", mcpEntry, "--output-dir", outputDir, "--profile-dir", profileDir, "--headless", String(headless)]
-    : [mcpEntry, "--output-dir", outputDir, "--profile-dir", profileDir, "--headless", String(headless)];
+    ? ["tsx", mcpEntry, "--output-dir", outputDir]
+    : [mcpEntry, "--output-dir", outputDir];
 
   const mcpConfig = {
     mcpServers: {
@@ -230,16 +277,14 @@ async function main() {
   console.log(`\nBuilding map for: "${prompt}"`);
   console.log(`Model: ${model}`);
   console.log(`Output folder: ${outputDir}`);
-  if (!existsSync(profileDir)) {
-    console.log(
-      "\nFirst run: a Chromium window will open. Sign in to Google so Gemini works.\n" +
-        "The session is saved in .gemini-profile/ and reused on subsequent runs."
-    );
-  }
-  console.log("");
+  console.log(
+    `\nWhen the agent needs an image, you'll see an "IMAGE NEEDED" block here.\n` +
+      `Generate it however you like (Gemini app, Claude.ai, anywhere), save the PNG,\n` +
+      `then drag the file into this terminal and press Enter.\n`
+  );
 
   const abort = new AbortController();
-  const watcher = watchQuestions(questionsDir, abort.signal);
+  const watcher = watchRequests(requestsDir, abort.signal);
 
   const claudeArgs = [
     "-p",

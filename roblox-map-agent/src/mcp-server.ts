@@ -18,7 +18,6 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 
-import { GeminiBrowser } from "./gemini-browser.js";
 import {
   buildRbxlx,
   type Face,
@@ -44,10 +43,8 @@ function readArg(name: string, fallback?: string): string {
 }
 
 const OUTPUT_DIR = readArg("output-dir");
-const QUESTIONS_DIR = path.join(OUTPUT_DIR, ".questions");
-const PROFILE_DIR = readArg("profile-dir");
+const REQUESTS_DIR = path.join(OUTPUT_DIR, ".requests");
 const IMAGE_DIR = path.join(OUTPUT_DIR, "generated-assets");
-const HEADLESS = readArg("headless", "false") === "true";
 
 // Debug log — claude doesn't reliably surface MCP server stderr to the user's
 // terminal, so we tee everything to <output-dir>/mcp-debug.log too.
@@ -66,7 +63,7 @@ function dbg(msg: string): void {
 // Make sure the output dir is on disk before anything else (so debug log
 // doesn't fail silently). Top-level await is fine in ESM.
 await fs.mkdir(OUTPUT_DIR, { recursive: true });
-dbg(`mcp-server starting. output=${OUTPUT_DIR} headless=${HEADLESS}`);
+dbg(`mcp-server starting. output=${OUTPUT_DIR}`);
 
 process.on("uncaughtException", (err) => {
   dbg(`uncaughtException: ${err instanceof Error ? err.stack ?? err.message : String(err)}`);
@@ -90,14 +87,8 @@ const state = {
   ambient: undefined as Rgb | undefined,
   images: [] as ImageRec[],
   finalized: false,
-  questionCounter: 0,
+  requestCounter: 0,
 };
-
-const browser = new GeminiBrowser({
-  outputDir: IMAGE_DIR,
-  profileDir: PROFILE_DIR,
-  headless: HEADLESS,
-});
 
 // ─── tool input schemas ──────────────────────────────────────────────────────
 
@@ -191,7 +182,7 @@ const TOOL_DEFS = [
   {
     name: "generate_image",
     description:
-      "Generate an image with Google Gemini (via browser). Use for: skybox faces, decals, signs, posters, murals, billboards, concept art. Returns an imageId you can reference in place_part decals or set_skybox. Saves the PNG to the output folder. DO NOT use for ground or wall textures — they don't tile and will show seams; use Roblox built-in materials for those.",
+      "Request an image from the user. The user generates it manually (typically in Gemini) and provides a path to the saved PNG. Returns an imageId you can reference in place_part decals or set_skybox. Use for: skybox faces, decals, signs, posters, murals, billboards, concept art. DO NOT use for ground or wall textures — they don't tile; use Roblox built-in materials for those. Each generate_image call blocks until the user supplies the image, so prefer to batch these early in the run rather than asking for one image at a time after lots of geometry.",
     inputSchema: jsonSchema(ToolInputs.generate_image),
   },
   {
@@ -259,30 +250,38 @@ function partFromInput(p: z.infer<typeof PartShape>): PartSpec {
   };
 }
 
-async function askUserViaFile(question: string): Promise<string> {
-  await fs.mkdir(QUESTIONS_DIR, { recursive: true });
-  state.questionCounter += 1;
-  const stem = String(state.questionCounter).padStart(4, "0");
-  const qPath = path.join(QUESTIONS_DIR, `${stem}.q.txt`);
-  const aPath = path.join(QUESTIONS_DIR, `${stem}.a.txt`);
-  await fs.writeFile(qPath, question, "utf8");
+/**
+ * Generic file-handshake to ask the parent CLI to prompt the user for input.
+ * Writes <seq>.req.json describing the request; polls for <seq>.res.txt with
+ * the user's response (text answer for ask_user, file path for generate_image).
+ */
+async function requestFromUser(
+  type: "ask_user" | "generate_image",
+  payload: Record<string, unknown>,
+  timeoutMs: number
+): Promise<string> {
+  await fs.mkdir(REQUESTS_DIR, { recursive: true });
+  state.requestCounter += 1;
+  const stem = String(state.requestCounter).padStart(4, "0");
+  const reqPath = path.join(REQUESTS_DIR, `${stem}.req.json`);
+  const resPath = path.join(REQUESTS_DIR, `${stem}.res.txt`);
+  await fs.writeFile(reqPath, JSON.stringify({ type, ...payload }), "utf8");
+  dbg(`request ${stem} (${type}) written, waiting for response`);
 
-  // Poll for the answer file. The CLI parent watches the directory and
-  // writes <stem>.a.txt with the user's reply.
   const start = Date.now();
-  const TIMEOUT_MS = 10 * 60_000;
-  while (Date.now() - start < TIMEOUT_MS) {
+  while (Date.now() - start < timeoutMs) {
     try {
-      const answer = await fs.readFile(aPath, "utf8");
-      // Clean up so subsequent questions don't see stale files.
-      await fs.unlink(qPath).catch(() => {});
-      await fs.unlink(aPath).catch(() => {});
-      return answer.trim() || "(no answer)";
+      const response = await fs.readFile(resPath, "utf8");
+      await fs.unlink(reqPath).catch(() => {});
+      await fs.unlink(resPath).catch(() => {});
+      const trimmed = response.trim();
+      dbg(`request ${stem} (${type}) got response (${trimmed.length} chars)`);
+      return trimmed;
     } catch {
       await new Promise((r) => setTimeout(r, 250));
     }
   }
-  throw new Error("ask_user timed out waiting for the user.");
+  throw new Error(`${type} timed out after ${Math.round(timeoutMs / 1000)}s.`);
 }
 
 async function writeFinalOutputs(summary: string): Promise<void> {
@@ -330,8 +329,8 @@ async function dispatch(name: string, raw: unknown): Promise<{ content: { type: 
   switch (name) {
     case "ask_user": {
       const { question } = ToolInputs.ask_user.parse(raw);
-      const answer = await askUserViaFile(question);
-      return asText(`User answered: ${answer}`);
+      const answer = await requestFromUser("ask_user", { question }, 10 * 60_000);
+      return asText(`User answered: ${answer || "(no answer)"}`);
     }
     case "generate_image": {
       const { id, prompt } = ToolInputs.generate_image.parse(raw);
@@ -339,11 +338,16 @@ async function dispatch(name: string, raw: unknown): Promise<{ content: { type: 
         const existing = state.images.find((i) => i.id === id)!;
         return asText(`Image '${id}' already exists at ${existing.filepath}.`);
       }
-      await browser.start();
-      const filepath = await browser.generate({ id, prompt });
-      state.images.push({ id, prompt, filepath });
+      const userPath = await requestFromUser("generate_image", { id, prompt }, 30 * 60_000);
+      // Copy the user's image into our output dir so the run is self-contained.
+      await fs.mkdir(IMAGE_DIR, { recursive: true });
+      const safe = id.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+      const ext = path.extname(userPath).toLowerCase() || ".png";
+      const dest = path.join(IMAGE_DIR, `${safe}${ext}`);
+      await fs.copyFile(userPath, dest);
+      state.images.push({ id, prompt, filepath: dest });
       return asText(
-        `Generated image '${id}' saved to ${filepath}. Reference as imageId='${id}' in place_part decals or set_skybox.`
+        `Image '${id}' saved to ${dest}. Reference as imageId='${id}' in place_part decals or set_skybox.`
       );
     }
     case "place_part": {
@@ -379,8 +383,6 @@ async function dispatch(name: string, raw: unknown): Promise<{ content: { type: 
       const { summary } = ToolInputs.finalize_map.parse(raw);
       await writeFinalOutputs(summary);
       state.finalized = true;
-      // Close the browser so Playwright doesn't keep the process hanging.
-      await browser.close().catch(() => {});
       return asText(
         `Finalized. Wrote ${path.join(OUTPUT_DIR, "map.rbxlx")} and README.md. ${state.parts.length} parts, ${state.models.length} models, ${state.images.length} images.`
       );
