@@ -1,90 +1,216 @@
 #!/usr/bin/env node
-import "dotenv/config";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { runAgent } from "./agent.js";
-import { buildRbxlx } from "./rbxlx.js";
+// CLI orchestrator. Spawns `claude -p` with our local MCP server attached,
+// then watches the run's `.questions/` dir for ask_user prompts and relays
+// them to the user via stdin/stdout.
 
-function getPrompt(): string {
-  const args = process.argv.slice(2);
-  const promptArg = args.find((a) => !a.startsWith("--"));
-  if (!promptArg) {
+import { spawn, spawnSync } from "node:child_process";
+import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import readline from "node:readline/promises";
+import { fileURLToPath } from "node:url";
+
+const SYSTEM_PROMPT = `You are a Roblox map builder using a set of MCP tools (prefixed mcp__roblox__).
+
+You design and emit a complete, playable Roblox map by calling tools. The runtime writes a .rbxlx place file (the user drags into Roblox Studio) once you call mcp__roblox__finalize_map.
+
+Coordinate system:
+- Roblox uses studs (~1 ft). Y is up. X and Z are horizontal.
+- A 2048x2048 stud Baseplate is auto-added at y=0; build on top of it (parts at y > 0).
+- A typical human character is ~5 studs tall.
+
+Materials available: Plastic, SmoothPlastic, Neon, Wood, WoodPlanks, Brick, Cobblestone, Concrete, Granite, Slate, Marble, Sand, Glass, Grass, Metal, DiamondPlate, CorrodedMetal, Pebble, Ice, Foil, Fabric. Prefer real materials over plain Plastic.
+
+Image generation rules:
+- Use mcp__roblox__generate_image for HERO art only: skybox faces, decals on signs/posters/billboards/murals.
+- DO NOT use it for ground or wall textures — they don't tile and show seams. Use Roblox built-in materials for those.
+- Skybox: 6 separate images (up, down, front, back, left, right). Each prompt should say "seamless skybox face, no horizon line, no sun, no clouds at edges, painted matte" plus the theme. For a stylized vibe you can reuse the same image on all 6 faces.
+- Decals: square aspect (the browser only emits one image per prompt; framing the prompt as "square poster, centered subject" works best).
+
+Workflow:
+1. Briefly internalize the user's theme. If something fundamental is unclear (scale, vibe, must-have features), use mcp__roblox__ask_user — but only ONE round of questions, then commit and build.
+2. Plan a layout: 5-15 distinct landmarks/zones, spatially separated.
+3. Generate hero art FIRST (skybox + key decals).
+4. Build geometry. Use mcp__roblox__place_model for groups (a building is a model; a tree is a model). Compound parts beat single giant primitives — a house is walls + roof + door + windows.
+5. Set the skybox (mcp__roblox__set_skybox) and ambient color (mcp__roblox__set_ambient_light).
+6. Call mcp__roblox__finalize_map with a short summary.
+
+Style:
+- Walls 10-20 studs tall, buildings 15-30 studs wide. Whole map can extend hundreds of studs.
+- Vary materials/colors across landmarks. Pick 3-5 colors per zone and stick to them.
+- Anchor everything (default).
+- Name models descriptively ("MainTavern", "OakTree_01", "DockPier").
+
+Constraints:
+- A complete map is roughly 50-200 parts and 5-15 generated images. Do not over-build.
+- Don't ask the user for permission to proceed — just build. The user wants a finished map, not a planning session.
+
+When done, call mcp__roblox__finalize_map.`;
+
+function checkClaudeAvailable(): void {
+  const which = spawnSync("which", ["claude"], { encoding: "utf8" });
+  if (which.status !== 0 || !which.stdout.trim()) {
     console.error(
-      "Usage: roblox-map-agent \"<map theme prompt>\"\n\n" +
-        "Example:\n" +
-        "  roblox-map-agent \"a small medieval village by a river, with a tavern, market square, and watchtower\""
+      "\nCould not find the `claude` CLI on your PATH.\n" +
+        "Install Claude Code from https://claude.com/code, then run `claude` once and `/login` with your Pro/Max account.\n"
     );
     process.exit(1);
   }
-  return promptArg;
 }
 
-function getEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    console.error(`Missing required env var: ${name}. Copy .env.example to .env and fill it in.`);
+function getPrompt(): string {
+  const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  const prompt = args.join(" ").trim();
+  if (!prompt) {
+    console.error(
+      'Usage: roblox-map-agent "<map theme prompt>"\n\n' +
+        "Example:\n" +
+        '  roblox-map-agent "a small medieval village by a river, with a tavern, market square, and watchtower"'
+    );
     process.exit(1);
   }
-  return v;
+  return prompt;
+}
+
+function getFlag(name: string): string | undefined {
+  const idx = process.argv.indexOf(`--${name}`);
+  if (idx >= 0 && idx < process.argv.length - 1) {
+    const next = process.argv[idx + 1]!;
+    if (!next.startsWith("--")) return next;
+  }
+  return undefined;
+}
+
+function hasFlag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
+async function watchQuestions(questionsDir: string, signal: AbortSignal): Promise<void> {
+  await fs.mkdir(questionsDir, { recursive: true });
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const handled = new Set<string>();
+
+  while (!signal.aborted) {
+    let entries: string[] = [];
+    try {
+      entries = await fs.readdir(questionsDir);
+    } catch {
+      // dir might not exist yet
+    }
+    for (const file of entries) {
+      if (!file.endsWith(".q.txt") || handled.has(file)) continue;
+      const stem = file.replace(/\.q\.txt$/, "");
+      handled.add(file);
+      const qPath = path.join(questionsDir, file);
+      const aPath = path.join(questionsDir, `${stem}.a.txt`);
+      try {
+        const question = (await fs.readFile(qPath, "utf8")).trim();
+        process.stdout.write(`\n[agent asks] ${question}\n`);
+        const answer = await rl.question("> ");
+        await fs.writeFile(aPath, answer, "utf8");
+      } catch (err) {
+        // If the question file disappears or the answer write fails, ignore;
+        // the MCP server will time out on its own.
+      }
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  rl.close();
 }
 
 async function main() {
+  checkClaudeAvailable();
   const prompt = getPrompt();
-  const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
-  const geminiApiKey = getEnv("GOOGLE_API_KEY");
+  const model = getFlag("model") ?? "sonnet";
+  const headless = hasFlag("headless");
+
+  // Project root = parent of dist/ or src/, depending on how it ran.
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const projectRoot = path.resolve(here, "..");
+  const profileDir = path.join(projectRoot, ".gemini-profile");
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const outputRoot = path.resolve("output", stamp);
-  const imageDir = path.join(outputRoot, "generated-assets");
+  const outputDir = path.resolve("output", stamp);
+  const imageDir = path.join(outputDir, "generated-assets");
+  const questionsDir = path.join(outputDir, ".questions");
   await fs.mkdir(imageDir, { recursive: true });
+  await fs.mkdir(questionsDir, { recursive: true });
+
+  // Locate the MCP server entry. Use tsx if running from src/, node if from dist/.
+  const isTs = here.endsWith("src");
+  const mcpEntry = isTs
+    ? path.join(here, "mcp-server.ts")
+    : path.join(here, "mcp-server.js");
+  const mcpCommand = isTs ? "npx" : "node";
+  const mcpArgs = isTs
+    ? ["tsx", mcpEntry, "--output-dir", outputDir, "--profile-dir", profileDir, "--headless", String(headless)]
+    : [mcpEntry, "--output-dir", outputDir, "--profile-dir", profileDir, "--headless", String(headless)];
+
+  const mcpConfig = {
+    mcpServers: {
+      roblox: {
+        command: mcpCommand,
+        args: mcpArgs,
+      },
+    },
+  };
+  const mcpConfigPath = path.join(outputDir, "mcp-config.json");
+  await fs.writeFile(mcpConfigPath, JSON.stringify(mcpConfig, null, 2), "utf8");
 
   console.log(`\nBuilding map for: "${prompt}"`);
-  console.log(`Output folder: ${outputRoot}\n`);
+  console.log(`Model: ${model}`);
+  console.log(`Output folder: ${outputDir}`);
+  if (!existsSync(profileDir)) {
+    console.log(
+      "\nFirst run: a Chromium window will open. Sign in to Google so Gemini works.\n" +
+        "The session is saved in .gemini-profile/ and reused on subsequent runs."
+    );
+  }
+  console.log("");
 
-  const state = await runAgent({
-    initialPrompt: prompt,
-    anthropicApiKey,
-    geminiApiKey,
-    imageDir,
+  const abort = new AbortController();
+  const watcher = watchQuestions(questionsDir, abort.signal);
+
+  const claudeArgs = [
+    "-p",
+    prompt,
+    "--append-system-prompt",
+    SYSTEM_PROMPT,
+    "--mcp-config",
+    mcpConfigPath,
+    "--allowedTools",
+    "mcp__roblox__ask_user mcp__roblox__generate_image mcp__roblox__place_part mcp__roblox__place_model mcp__roblox__set_skybox mcp__roblox__set_ambient_light mcp__roblox__finalize_map",
+    "--dangerously-skip-permissions",
+    "--max-turns",
+    "80",
+    "--model",
+    model,
+  ];
+
+  const child = spawn("claude", claudeArgs, { stdio: ["ignore", "inherit", "inherit"] });
+
+  const exitCode: number = await new Promise((resolve) => {
+    child.on("exit", (code) => resolve(code ?? 0));
   });
+  abort.abort();
+  await watcher.catch(() => {});
 
-  const rbxlx = buildRbxlx(state.toSpec());
-  const rbxlxPath = path.join(outputRoot, "map.rbxlx");
-  await fs.writeFile(rbxlxPath, rbxlx, "utf8");
+  if (exitCode !== 0) {
+    console.error(`\nclaude exited with code ${exitCode}.`);
+    process.exit(exitCode);
+  }
 
-  const summary = [
-    `# Roblox Map: ${prompt}`,
-    ``,
-    `Generated by roblox-map-agent on ${new Date().toISOString()}.`,
-    ``,
-    `## Files`,
-    `- \`map.rbxlx\` — drag this into Roblox Studio (File > Open, or just drag onto the Studio window).`,
-    `- \`generated-assets/\` — ${state.images.length} PNG(s) Gemini produced for skybox + decals.`,
-    ``,
-    `## Stats`,
-    `- Loose parts: ${state.parts.length}`,
-    `- Models: ${state.models.length}`,
-    `- Generated images: ${state.images.length}`,
-    `- Skybox set: ${state.skybox ? "yes" : "no"}`,
-    ``,
-    `## Importing the images into Studio`,
-    `Decals and skybox faces in the .rbxlx reference \`rbxasset://localfile/<name>.png\` placeholders. To make them appear in-game:`,
-    ``,
-    `1. Open Roblox Studio with \`map.rbxlx\`.`,
-    `2. In Studio, go to **View > Asset Manager**, then upload each PNG from \`generated-assets/\` (Studio gives you an \`rbxassetid://\` URL after upload).`,
-    `3. Select the Decal/Sky in the Explorer and replace the \`Texture\` (or \`SkyboxUp\`/etc.) URL with the new \`rbxassetid://\` value.`,
-    ``,
-    `If you skip step 2-3, the geometry and materials still render fine; only the generated art will show as missing.`,
-    ``,
-    `## Generated images`,
-    ...state.images.map((i) => `- **${i.id}** (\`${path.basename(i.filepath)}\`): ${i.prompt}`),
-  ].join("\n");
-
-  await fs.writeFile(path.join(outputRoot, "README.md"), summary, "utf8");
-
-  console.log(`\nDone.`);
-  console.log(`  ${rbxlxPath}`);
-  console.log(`  ${path.join(outputRoot, "README.md")}`);
+  const rbxlxPath = path.join(outputDir, "map.rbxlx");
+  if (existsSync(rbxlxPath)) {
+    console.log(`\nDone.`);
+    console.log(`  ${rbxlxPath}`);
+    console.log(`  ${path.join(outputDir, "README.md")}`);
+  } else {
+    console.error(
+      `\nclaude finished but no map.rbxlx was written — the agent likely never called finalize_map. Check the output folder for partial state.`
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

@@ -1,34 +1,52 @@
 # roblox-map-agent
 
-An AI agent that builds complete Roblox maps from a single prompt. **Claude Opus 4.7** handles planning and geometry; **Google Gemini (Imagen)** handles hero art (skybox, decals, signs, posters). Output is a `.rbxlx` place file plus the generated PNGs — drag into Roblox Studio and play.
+An AI agent that builds complete Roblox maps from a single prompt — runs entirely off subscriptions you already pay for, no API keys.
 
-## How it works
+- **Claude** (planning + tool use): your existing Claude Code login (Pro/Max).
+- **Gemini** (skybox + decals + signs + posters): your Gemini Advanced login, driven via headed Playwright.
+
+Output: a `.rbxlx` place file + a folder of generated PNGs. Drag the .rbxlx into Roblox Studio.
+
+## Architecture
 
 ```
-your prompt ──▶ Claude (planner / tool user)
-                    │
-                    ├── ask_user        ── readline prompts when scope is genuinely ambiguous
-                    ├── generate_image  ── Gemini → PNG saved to output/<run>/generated-assets/
-                    ├── place_part      ── adds a Part to Workspace
-                    ├── place_model     ── adds a Model (group of Parts)
-                    ├── set_skybox      ── 6 face Sky in Lighting
-                    ├── set_ambient_light
-                    └── finalize_map    ── ends the loop, runtime emits map.rbxlx
+your prompt
+   │
+   ▼
+src/index.ts ──spawns──▶ claude -p "..."  --mcp-config mcp-config.json
+                                  │
+                                  │  (uses your Claude Code subscription)
+                                  ▼
+                             Claude calls our 7 MCP tools (stdio)
+                                  │
+                                  ▼
+                         src/mcp-server.ts
+                          ├─ ask_user            → file-based hand-off back to index.ts (your terminal)
+                          ├─ generate_image      → Playwright on gemini.google.com (uses your Gemini sub)
+                          ├─ place_part / place_model
+                          ├─ set_skybox / set_ambient_light
+                          └─ finalize_map        → writes output/<run>/map.rbxlx + README.md
 ```
 
-Built-in materials (Grass, Brick, Wood, Slate, etc.) are used for ground and walls — Gemini-generated images don't tile, so they're reserved for hero art. Skybox can be 6 separate faces or one image reused on all 6.
+The MCP server holds map state in memory across all tool calls and emits the .rbxlx when Claude calls `finalize_map`.
 
-## Setup
+## Setup (one time, on a Mac)
 
 ```bash
 cd roblox-map-agent
 npm install
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY and GOOGLE_API_KEY
+npm run playwright:install   # downloads Chromium for Playwright
 ```
 
-API keys:
-- `ANTHROPIC_API_KEY` — https://console.anthropic.com/settings/keys
-- `GOOGLE_API_KEY` — https://aistudio.google.com/app/apikey (must have Imagen access enabled)
+Make sure `claude` is on your PATH and logged in:
+
+```bash
+claude            # opens interactive mode
+/login            # log in with your Pro/Max subscription
+/exit
+```
+
+That's it — you don't need to do this again.
 
 ## Usage
 
@@ -36,50 +54,57 @@ API keys:
 npm run start -- "a small medieval village by a river, with a tavern, market square, and watchtower"
 ```
 
-The agent may ask one round of clarifying questions, generate ~5–15 images, place ~50–200 parts, then finalize. Each run produces:
+What happens:
 
-```
-output/<timestamp>/
-├── map.rbxlx              # drag into Roblox Studio
-├── README.md              # what was built + how to wire up the images
-└── generated-assets/      # Gemini PNGs (skybox faces, decals)
-    ├── skybox_up.png
-    ├── sign_welcome.png
-    └── ...
-```
+1. The CLI spawns `claude -p` with your map prompt and our MCP server attached.
+2. Claude plans the map and starts calling tools.
+3. The first time it calls `generate_image`, a **Chromium window opens** at gemini.google.com. If you're not logged in, sign in once — the session is saved in `.gemini-profile/` and reused on every future run.
+4. Claude generates 5–15 hero images, places 50–200 parts, and finalizes.
+5. You get:
+   ```
+   output/<timestamp>/
+   ├── map.rbxlx              # drag into Roblox Studio
+   ├── README.md              # what was built + how to wire up images
+   ├── mcp-config.json        # the config used for this run (debug)
+   └── generated-assets/      # Gemini PNGs
+   ```
 
-### Hooking up the images in Studio
+### Wiring up the images in Studio
 
-The .rbxlx references PNGs as `rbxasset://localfile/<name>.png` placeholders. Studio doesn't auto-resolve those, so:
+The .rbxlx references PNGs as `rbxasset://localfile/<name>.png` placeholders. Studio doesn't auto-resolve those, so once per run:
 
 1. Open `map.rbxlx` in Roblox Studio.
-2. **View > Asset Manager**, drag the PNGs from `generated-assets/` to upload. Studio gives each an `rbxassetid://NUMBER` URL.
-3. In the Explorer, find each Decal / Sky and replace the texture URL.
+2. **View → Asset Manager**, drag the PNGs from `generated-assets/`. Studio gives each an `rbxassetid://NUMBER` URL.
+3. In Explorer, find each Decal / Sky and replace the texture URL.
 
-Geometry, materials, and ambient lighting work without this step — only the Gemini art needs the manual upload.
+Geometry, materials, and lighting work without this step — only the Gemini art needs the manual upload.
 
-## Tweaking behavior
+### CLI flags
 
-- **Different model**: pass `model` into `runAgent()` in `src/agent.ts`. Defaults to `claude-opus-4-7`.
-- **More/fewer iterations**: `max_iterations` in `src/agent.ts` (default 60).
-- **Higher map quality / cost**: bump `max_tokens` in `src/agent.ts` (currently 32k).
-- **Different aspect ratios for images**: see the `aspectRatio` enum in `src/tools.ts`.
+```bash
+# Pick a model — defaults to "sonnet" (cheaper, plenty for layout work).
+npm run start -- "..." --model opus
+
+# Run Playwright headless (no visible browser). Use ONLY after you've logged in
+# once headed and saved the session.
+npm run start -- "..." --headless
+```
 
 ## File map
 
 ```
 src/
-├── index.ts     # CLI entry point — reads prompt, sets up output dir, runs agent, writes .rbxlx
-├── agent.ts    # System prompt + Claude tool runner setup
-├── tools.ts    # Zod-typed tools (ask_user, generate_image, place_part, ...)
-├── gemini.ts   # Imagen-4 client wrapper, saves PNGs to disk
-├── rbxlx.ts    # rbxlx XML builder (Workspace / Lighting / Sky / Part / Decal / Model)
-└── state.ts    # Shared mutable map state across tool calls
+├── index.ts              # CLI orchestrator: spawns claude -p, watches ask_user
+├── mcp-server.ts         # MCP stdio server: 7 tools, map state, .rbxlx writer
+├── gemini-browser.ts     # Playwright driver for gemini.google.com
+└── rbxlx.ts              # Roblox XML place-file builder
 ```
 
 ## Known limitations
 
-- Decals / skybox use local-file placeholders; Roblox Studio asset upload is manual.
-- No physics objects (everything is anchored). Easy to extend in `tools.ts`.
-- Material enum tokens are hand-mapped in `rbxlx.ts` — a few of the more obscure ones are approximate.
-- No MeshParts (only primitive shapes: Block, Ball, Cylinder, Wedge).
+- **Selectors are brittle.** Google reshuffles Gemini's UI a few times a year. When something breaks, you'll see a clear timeout error pointing at the failing selector — fix in `src/gemini-browser.ts`.
+- **Browser automation is gray-area against Google's TOS.** Personal use is low risk; don't hammer it for hours.
+- **Playwright keeps a real browser running.** If a run crashes mid-way, run `pkill -f chromium` to clean up stragglers.
+- **Decals / skybox use local-file placeholders.** Studio asset upload is manual (one-time per map).
+- **Material enum tokens** in `rbxlx.ts` are hand-mapped — common ones (Wood, Brick, Slate, Grass) are right; obscure ones (Foil, Fabric) are approximate.
+- **Only primitive shapes** (Block, Ball, Cylinder, Wedge). No MeshParts.

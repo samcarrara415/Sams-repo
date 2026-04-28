@@ -1,8 +1,8 @@
 {
   "name": "roblox-map-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "AI agent that builds complete Roblox maps using Claude (planner) and Google Gemini (image generation).",
+  "description": "AI agent that builds complete Roblox maps using Claude Code (subscription) and Google Gemini via browser automation (subscription).",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -11,13 +11,13 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "mcp": "tsx src/mcp-server.ts",
+    "typecheck": "tsc --noEmit",
+    "playwright:install": "playwright install chromium"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.0",
-    "@google/genai": "^1.50.0",
-    "dotenv": "^16.4.5",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "playwright": "^1.59.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
