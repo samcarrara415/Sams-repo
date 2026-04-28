@@ -118,6 +118,76 @@ async function watchQuestions(questionsDir: string, signal: AbortSignal): Promis
   rl.close();
 }
 
+function handleStreamLine(line: string): void {
+  let evt: any;
+  try {
+    evt = JSON.parse(line);
+  } catch {
+    // Not JSON — claude sometimes prints free text on init. Pass it through.
+    process.stdout.write(line + "\n");
+    return;
+  }
+
+  // Shape A: Claude Code's outer envelope.
+  switch (evt.type) {
+    case "system": {
+      if (evt.subtype === "init") {
+        process.stdout.write(`[claude] session ${evt.session_id ?? "?"} ready (${evt.model ?? ""})\n`);
+      }
+      return;
+    }
+    case "assistant": {
+      const blocks = evt.message?.content ?? [];
+      for (const b of blocks) {
+        if (b.type === "text" && typeof b.text === "string" && b.text.trim()) {
+          process.stdout.write(`\n[claude] ${b.text.trim()}\n`);
+        } else if (b.type === "tool_use") {
+          const args =
+            typeof b.input === "object" ? JSON.stringify(b.input).slice(0, 80) : String(b.input ?? "");
+          process.stdout.write(`[tool→] ${b.name}  ${args}${args.length >= 80 ? "…" : ""}\n`);
+        }
+      }
+      return;
+    }
+    case "user": {
+      const blocks = evt.message?.content ?? [];
+      for (const b of blocks) {
+        if (b.type === "tool_result") {
+          const text =
+            Array.isArray(b.content)
+              ? b.content
+                  .filter((c: any) => c.type === "text")
+                  .map((c: any) => c.text)
+                  .join(" ")
+              : String(b.content ?? "");
+          const trimmed = text.trim().slice(0, 120);
+          if (trimmed) process.stdout.write(`[tool←] ${trimmed}${text.length > 120 ? "…" : ""}\n`);
+        }
+      }
+      return;
+    }
+    case "result": {
+      if (typeof evt.total_cost_usd === "number") {
+        process.stdout.write(
+          `\n[claude] Done. Cost: $${evt.total_cost_usd.toFixed(4)}  Turns: ${evt.num_turns ?? "?"}\n`
+        );
+      }
+      return;
+    }
+    case "stream_event": {
+      // Anthropic API streaming deltas. Print incremental text only.
+      const inner = evt.event;
+      if (inner?.type === "content_block_delta" && inner.delta?.type === "text_delta") {
+        process.stdout.write(inner.delta.text);
+      }
+      return;
+    }
+    default:
+      // Unknown — quietly drop. Useful events are covered above.
+      return;
+  }
+}
+
 async function main() {
   checkClaudeAvailable();
   const prompt = getPrompt();
@@ -185,13 +255,33 @@ async function main() {
     "80",
     "--model",
     model,
+    "--output-format",
+    "stream-json",
+    "--verbose",
   ];
 
-  const child = spawn("claude", claudeArgs, { stdio: ["ignore", "inherit", "inherit"] });
+  const child = spawn("claude", claudeArgs, { stdio: ["ignore", "pipe", "inherit"] });
+  child.stdout.setEncoding("utf8");
+
+  // Parse stream-json line-by-line and surface useful events to the user.
+  // Claude's stream-json shapes vary; we handle the common ones loosely so a
+  // shape change just means we print less, never crashes.
+  let buf = "";
+  child.stdout.on("data", (chunk: string) => {
+    buf += chunk;
+    let idx: number;
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).trim();
+      buf = buf.slice(idx + 1);
+      if (!line) continue;
+      handleStreamLine(line);
+    }
+  });
 
   const exitCode: number = await new Promise((resolve) => {
     child.on("exit", (code) => resolve(code ?? 0));
   });
+  if (buf.trim()) handleStreamLine(buf.trim());
   abort.abort();
   await watcher.catch(() => {});
 
