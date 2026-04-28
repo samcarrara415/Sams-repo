@@ -32,26 +32,36 @@ export class GeminiBrowser {
     await fs.mkdir(this.profileDir, { recursive: true });
     await fs.mkdir(this.outputDir, { recursive: true });
 
-    this.context = await chromium.launchPersistentContext(this.profileDir, {
+    const launchOpts = {
       headless: this.headless,
       viewport: { width: 1280, height: 900 },
       acceptDownloads: true,
-    });
+      // Hide automation indicators so Google doesn't show
+      // "This browser may not be secure" on the sign-in page.
+      args: ["--disable-blink-features=AutomationControlled"],
+      ignoreDefaultArgs: ["--enable-automation"],
+    };
+
+    // Use the user's installed Chrome stable rather than Playwright's bundled
+    // Chromium — Google blocks login on the latter. Fall back to bundled
+    // Chromium if Chrome isn't installed (with a warning).
+    try {
+      this.context = await chromium.launchPersistentContext(this.profileDir, {
+        ...launchOpts,
+        channel: "chrome",
+      });
+    } catch (err) {
+      console.error(
+        "[gemini] Couldn't launch Chrome stable (channel:chrome). Falling back " +
+          "to Playwright's bundled Chromium — Google may flag the login as insecure.\n" +
+          "         Install Google Chrome and re-run to fix this.\n"
+      );
+      this.context = await chromium.launchPersistentContext(this.profileDir, launchOpts);
+    }
 
     this.page = this.context.pages()[0] ?? (await this.context.newPage());
-    await this.page.goto(GEMINI_URL, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
-
-    // If we landed on a sign-in page, surface a clear instruction. The user
-    // logs in interactively in the headed browser; we wait until they're back
-    // on the app.
-    if (await this.looksLikeSignIn()) {
-      console.error(
-        "\n[gemini] You're not logged in. Sign in to Google in the browser window I just opened.\n" +
-          "         I'll wait until you land on gemini.google.com/app …\n"
-      );
-      await this.page.waitForURL(/gemini\.google\.com\/app/, { timeout: 5 * 60_000 });
-      console.error("[gemini] Logged in. Continuing.\n");
-    }
+    await this.gotoFreshChat();
+    await this.ensureLoggedIn();
   }
 
   async close(): Promise<void> {
@@ -60,57 +70,53 @@ export class GeminiBrowser {
     this.page = null;
   }
 
-  private async looksLikeSignIn(): Promise<boolean> {
-    const url = this.page!.url();
-    return /accounts\.google\.com/.test(url) || /signin/.test(url);
-  }
-
-  /** Open a fresh chat so each generation is isolated. */
-  private async newChat(): Promise<void> {
+  /** Navigate to the Gemini app — guaranteed fresh chat each time. */
+  private async gotoFreshChat(): Promise<void> {
     if (!this.page) throw new Error("Browser not started.");
-    // Try the visible "New chat" affordance via aria-label/text. Fall back to
-    // navigating to the root URL.
-    const newChat = this.page.getByRole("button", { name: /new chat/i }).first();
-    if (await newChat.count()) {
-      await newChat.click().catch(() => {});
-    } else {
-      await this.page.goto(GEMINI_URL, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
-    }
+    await this.page.goto(GEMINI_URL, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
     await this.page.waitForLoadState("domcontentloaded");
   }
 
-  /** Try to enable image-generation mode if Gemini exposes a toggle. Best-effort. */
-  private async ensureImageMode(): Promise<void> {
-    if (!this.page) return;
-    // Try a few likely affordances. Each is a no-op if not found.
-    const candidates = [
-      this.page.getByRole("button", { name: /image/i }),
-      this.page.getByRole("menuitem", { name: /image/i }),
-      this.page.getByLabel(/image/i),
-    ];
-    for (const c of candidates) {
-      if ((await c.count()) > 0) {
-        await c.first().click({ trial: true }).catch(() => {});
-        // We don't actually click — many of these are unrelated. Real toggling
-        // happens via the prompt phrasing ("Generate an image of …"), which
-        // works without a UI click on current Gemini.
-      }
+  /**
+   * Block until the prompt input is visible. If Gemini hasn't rendered it
+   * within 10 seconds we assume the user isn't logged in and wait up to 10
+   * minutes for them to sign in.
+   */
+  private async ensureLoggedIn(): Promise<void> {
+    if (!this.page) throw new Error("Browser not started.");
+    const editor = this.promptEditor();
+    try {
+      await editor.waitFor({ state: "visible", timeout: 10_000 });
+      return;
+    } catch {
+      // not visible yet — probably needs sign-in
     }
+    console.error(
+      "\n[gemini] No prompt input visible — looks like you're not signed in.\n" +
+        "         Sign in to Google in the Chrome window I just opened.\n" +
+        "         I'll wait up to 10 minutes…\n"
+    );
+    await editor.waitFor({ state: "visible", timeout: 10 * 60_000 });
+    console.error("[gemini] Logged in. Continuing.\n");
+  }
+
+  private promptEditor() {
+    if (!this.page) throw new Error("Browser not started.");
+    // Prefer ARIA textbox; fall back to contenteditable.
+    return this.page.locator('[role="textbox"], [contenteditable="true"]').first();
   }
 
   async generate(opts: { id: string; prompt: string }): Promise<string> {
     if (!this.page) throw new Error("Browser not started.");
 
-    await this.newChat();
-    await this.ensureImageMode();
+    // Always start a fresh chat — Gemini won't reliably generate a new image
+    // in a chat that already has prior turns.
+    await this.gotoFreshChat();
+    await this.ensureLoggedIn();
 
     const fullPrompt = `Generate an image: ${opts.prompt}\n\nReturn only the image. Do not add captions or commentary.`;
 
-    // Find the prompt textbox. Gemini exposes it as a textbox / contenteditable.
-    const editor =
-      (await this.page.getByRole("textbox").first().count())
-        ? this.page.getByRole("textbox").first()
-        : this.page.locator('[contenteditable="true"]').first();
+    const editor = this.promptEditor();
     await editor.waitFor({ state: "visible", timeout: NAV_TIMEOUT_MS });
     await editor.click();
     await editor.fill("");
