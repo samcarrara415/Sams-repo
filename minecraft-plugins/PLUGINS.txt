@@ -1,0 +1,183 @@
+================================================================
+ Best Survival Plugins for Paper 1.21.11
+ Downloaded: 2026-05-12
+ Target server: PaperMC 1.21.11 (latest stable)
+================================================================
+
+All jars in this folder were pulled from official sources
+(Modrinth, lucko CI, papermc Hangar). Drop them into your
+server's `plugins/` directory and start Paper - they auto-generate
+their own config files on first run.
+
+----------------------------------------------------------------
+CORE: Permissions, commands, economy bridge
+----------------------------------------------------------------
+
+LuckPerms-Bukkit-5.5.17.jar
+    Industry-standard permissions and group management.
+    Web editor at luckperms.net/editor for sane group editing.
+    Source: https://modrinth.com/plugin/luckperms
+
+EssentialsX-2.21.2.jar
+    Core survival commands: /home, /tpa, /spawn, /msg, /warp,
+    /back, kits, AFK detection, sign shops, item lore tools.
+    Source: https://modrinth.com/plugin/essentialsx
+
+EssentialsXChat-2.21.2.jar
+    Chat formatting (prefixes/suffixes from LuckPerms), local
+    chat radius, mention pings. Add-on to EssentialsX.
+    Source: https://modrinth.com/plugin/essentialsx-chat-module
+
+EssentialsXSpawn-2.21.2.jar
+    /spawn, /setspawn, first-join spawn, respawn-at-spawn.
+    Source: https://modrinth.com/plugin/essentialsx-spawn
+
+EssentialsXProtect-2.21.2.jar
+    Lightweight global protections: TNT, fire spread, lava
+    flow, creeper damage toggles. Pair with GriefPrevention.
+    Source: https://modrinth.com/plugin/essentialsx-protect
+
+EssentialsXAntiBuild-2.21.2.jar
+    Permission-gated block place/break - useful for guest/
+    visitor ranks.
+    Source: https://modrinth.com/plugin/essentialsx-antibuild
+
+VaultUnlocked-2.19.1.jar
+    Bridge API for economy/permission interop. Required by
+    most shop and economy plugins. Modern fork of Vault that
+    works on 1.21.x without complaints.
+    Source: https://modrinth.com/plugin/vaultunlocked
+
+PlaceholderAPI-2.12.2.jar
+    Provides %placeholders% used by chat, scoreboard, tab,
+    and GUI plugins. After install run `/papi ecloud download <expansion>`.
+    Source: https://modrinth.com/plugin/placeholderapi
+
+----------------------------------------------------------------
+ANTI-GRIEF: Land claiming and rollback
+----------------------------------------------------------------
+
+GriefPrevention.jar
+    Player-driven land claiming with a golden shovel. The
+    survival standard - low friction, no admins required to
+    set up claims, supports subdivisions and trust levels.
+    Source: https://modrinth.com/plugin/griefprevention
+
+CoreProtect-CE-23.1.jar
+    Block/inventory/chat logging with rollback. Essential
+    for undoing grief: `/co rollback u:<player> t:1d r:50`.
+    "CE" = Community Edition, the maintained Paper-friendly fork.
+    Source: https://modrinth.com/plugin/coreprotect
+
+WorldGuard-bukkit-7.0.16.jar
+    Region protection with per-region flags (pvp, mob-spawn,
+    block-break, etc.). Use alongside GriefPrevention for
+    spawn/admin regions.
+    Source: https://modrinth.com/plugin/worldguard
+
+----------------------------------------------------------------
+ADMIN TOOLS
+----------------------------------------------------------------
+
+WorldEdit-bukkit-7.4.3.jar
+    In-game world editing: selections (//wand), copy/paste,
+    mass replace, schematics, brushes. Required by WorldGuard.
+    Source: https://modrinth.com/plugin/worldedit
+
+Multiverse-Core-5.6.2.jar
+    Multi-world support: separate Nether/End, creative world,
+    resource world that resets on a schedule, per-world
+    gamemodes and inventories.
+    Source: https://modrinth.com/plugin/multiverse-core
+
+Chunky-Bukkit-1.4.40.jar
+    Async chunk pre-generator. Run `/chunky radius 5000` then
+    `/chunky start` to pre-generate, then shrink your world
+    border to match. Massively reduces lag from player exploration.
+    Source: https://modrinth.com/plugin/chunky
+
+spark-1.10.172-paper.jar
+    Performance profiler. `/spark profiler` to find what's
+    eating TPS, `/spark heapsummary` for memory. From lucko
+    (also author of LuckPerms).
+    Source: https://spark.lucko.me  (official Jenkins CI)
+
+----------------------------------------------------------------
+CLIENT COMPATIBILITY
+----------------------------------------------------------------
+
+ViaVersion-5.9.2-SNAPSHOT.jar
+    Lets newer Minecraft clients connect to your server.
+    Source: https://modrinth.com/plugin/viaversion
+
+ViaBackwards-5.9.2-SNAPSHOT.jar
+    Companion: lets older clients (e.g. 1.20.x) connect to
+    your 1.21.11 server. Install both together.
+    Source: https://modrinth.com/plugin/viabackwards
+
+----------------------------------------------------------------
+QUALITY OF LIFE
+----------------------------------------------------------------
+
+HuskHomes-Paper-4.10-089d883.jar
+    Modern /home, /warp, /tpa with cross-server support.
+    Optional - EssentialsX already provides these. Pick one,
+    not both. HuskHomes is nicer if you plan a Velocity proxy
+    network later.
+    Source: https://modrinth.com/plugin/huskhomes
+
+DiscordSRV-Build-1.30.5.jar
+    Two-way Discord <-> in-game chat, console relay, join/
+    leave/death messages, Discord-account-linked rewards.
+    Requires editing config.yml with your bot token + channel ID.
+    Source: https://modrinth.com/plugin/discordsrv
+
+----------------------------------------------------------------
+WEB MAPS (pick one - they overlap)
+----------------------------------------------------------------
+
+bluemap-5.16-spigot.jar
+    3D web map with live player markers. Pretty, heavier on
+    disk. Built-in webserver on port 8100 by default.
+    Source: https://modrinth.com/plugin/bluemap
+
+squaremap-paper-mc1.21.11-1.3.12.jar
+    Minimalist top-down web map. Lightweight, fast. Modern
+    Dynmap alternative.
+    Source: https://modrinth.com/plugin/squaremap
+
+----------------------------------------------------------------
+NOT INCLUDED (requires manual download)
+----------------------------------------------------------------
+
+mcMMO
+    RPG-style skill progression (mining, woodcutting, combat,
+    herbalism, alchemy, etc.). The premier survival progression
+    plugin, but the author distributes it through SpigotMC's
+    paid resource page, which requires a logged-in account and
+    therefore can't be auto-downloaded.
+    Get it from: https://www.spigotmc.org/resources/mcmmo.64348/
+    A free community build is sometimes available on the mcMMO
+    Discord - see https://discord.gg/mcMMO
+
+================================================================
+ INSTALL ORDER (recommended)
+================================================================
+ 1. Drop everything into `<server>/plugins/`
+ 2. Start the server once, then stop it - configs are generated
+ 3. Edit `plugins/EssentialsX/config.yml` (motd, kits, currency)
+ 4. Edit `plugins/LuckPerms/` via the web editor:
+       /lp editor
+ 5. Edit `plugins/DiscordSRV/config.yml` (bot token + channel)
+ 6. /chunky radius 5000 ; /chunky start  (pre-generate world)
+ 7. Set spawn:  /setspawn  then  /spawn
+
+================================================================
+ SOURCES
+================================================================
+ All jars are from official, free, open-source distribution
+ channels:
+   - Modrinth     (api.modrinth.com)
+   - PaperMC Hangar (hangar.papermc.io)
+   - lucko CI     (ci.lucko.me - spark, official)
+ No paywalled or pirated content is included.
