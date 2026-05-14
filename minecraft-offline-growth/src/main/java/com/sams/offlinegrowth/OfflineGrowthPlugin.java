@@ -14,6 +14,10 @@ public final class OfflineGrowthPlugin extends JavaPlugin {
         lastLoadedKey = new NamespacedKey(this, "last_loaded");
         cropGrower = new CropGrower(this);
         getServer().getPluginManager().registerEvents(new ChunkGrowthListener(this), this);
+        var cmd = getCommand("offlinegrowth");
+        if (cmd != null) {
+            cmd.setExecutor(new OfflineGrowthCommand(this));
+        }
         getLogger().info("OfflineGrowth enabled.");
     }
 

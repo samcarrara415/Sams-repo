@@ -4,3 +4,13 @@ main: com.sams.offlinegrowth.OfflineGrowthPlugin
 api-version: '26.1.2'
 author: sams
 description: Advances crop growth when chunks reload, simulating real-time growth while players were away.
+commands:
+  offlinegrowth:
+    description: OfflineGrowth diagnostics and manual simulation.
+    usage: /offlinegrowth simulate <seconds> | /offlinegrowth status
+    aliases: [og]
+    permission: offlinegrowth.admin
+permissions:
+  offlinegrowth.admin:
+    description: Manage and test OfflineGrowth.
+    default: op

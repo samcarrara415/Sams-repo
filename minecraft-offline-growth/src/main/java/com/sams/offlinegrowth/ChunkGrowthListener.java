@@ -21,7 +21,12 @@ public final class ChunkGrowthListener implements Listener {
         Chunk chunk = event.getChunk();
         PersistentDataContainer pdc = chunk.getPersistentDataContainer();
         Long lastLoadedMillis = pdc.get(plugin.getLastLoadedKey(), PersistentDataType.LONG);
+        boolean debug = plugin.getConfig().getBoolean("debug", false);
         if (lastLoadedMillis == null) {
+            if (debug) {
+                plugin.getLogger().info("Chunk load " + chunk.getX() + "," + chunk.getZ()
+                        + " (" + chunk.getWorld().getName() + ") - no prior unload stamp, skipping.");
+            }
             return;
         }
         long elapsedMillis = System.currentTimeMillis() - lastLoadedMillis;
@@ -29,6 +34,10 @@ public final class ChunkGrowthListener implements Listener {
             return;
         }
         long elapsedSeconds = elapsedMillis / 1000L;
+        if (debug) {
+            plugin.getLogger().info("Chunk load " + chunk.getX() + "," + chunk.getZ()
+                    + " - elapsed " + elapsedSeconds + "s since unload, scheduling scan.");
+        }
         plugin.getCropGrower().advanceChunk(chunk, elapsedSeconds);
     }
 
@@ -37,5 +46,9 @@ public final class ChunkGrowthListener implements Listener {
         Chunk chunk = event.getChunk();
         PersistentDataContainer pdc = chunk.getPersistentDataContainer();
         pdc.set(plugin.getLastLoadedKey(), PersistentDataType.LONG, System.currentTimeMillis());
+        if (plugin.getConfig().getBoolean("debug", false)) {
+            plugin.getLogger().info("Chunk unload " + chunk.getX() + "," + chunk.getZ()
+                    + " (" + chunk.getWorld().getName() + ") - stamp written.");
+        }
     }
 }
