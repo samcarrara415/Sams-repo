@@ -1,0 +1,6 @@
+name: OfflineGrowth
+version: '${project.version}'
+main: com.sams.offlinegrowth.OfflineGrowthPlugin
+api-version: '1.21'
+author: sams
+description: Advances crop growth when chunks reload, simulating real-time growth while players were away.

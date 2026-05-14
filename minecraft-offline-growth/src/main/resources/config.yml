@@ -1,0 +1,24 @@
+# OfflineGrowth configuration
+# Seconds required for one growth stage (age advance by 1).
+# Vanilla wheat under ideal conditions averages ~5-15 minutes per stage,
+# so 300s (5 min) is a reasonable, slightly generous default.
+
+# Cap on elapsed time considered when a chunk reloads.
+# Without this, a chunk untouched for months would just clamp to max age
+# anyway, but the cap also limits work per chunk-load. Seconds.
+max-elapsed-seconds: 2592000  # 30 days
+
+# Seconds per growth stage, per crop. Set <= 0 to disable that crop.
+seconds-per-stage:
+  WHEAT: 300
+  CARROTS: 300
+  POTATOES: 300
+  BEETROOTS: 420
+  NETHER_WART: 600
+  COCOA: 600
+  SWEET_BERRY_BUSH: 900
+  MELON_STEM: 480
+  PUMPKIN_STEM: 480
+
+# If true, log per-chunk growth activity to console. Noisy; for debugging.
+debug: false
