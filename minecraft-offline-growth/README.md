@@ -25,7 +25,7 @@ neighbor checks and is out of scope.
 
 ## Build
 
-Requires JDK 21 and Maven.
+Requires JDK 25 (Paper 26.1.2 ships Java 25 bytecode) and Maven.
 
 ```
 cd minecraft-offline-growth
@@ -40,11 +40,7 @@ Output jar: `target/offline-growth-1.0.0.jar`. Drop it into your server's
 `plugins/OfflineGrowth/config.yml` is generated on first launch. Edit
 `seconds-per-stage` per crop, or set a value to `0` to disable that crop.
 
-## Compatibility note
+## Compatibility
 
-The pom targets `paper-api 1.21.4`, which is the latest API version this
-plugin was authored against. Paper 26.x renamed its versioning scheme; the
-Bukkit API surface this plugin uses (events, BlockData, PersistentDataContainer)
-has been stable for years and should load on Paper 26.1.2 without changes.
-If the server refuses to load the jar due to `api-version` in `plugin.yml`,
-remove that line or update it to whatever value your Paper build accepts.
+Built against `paper-api 26.1.2.build.63-stable` with `api-version: '26.1.2'`
+in plugin.yml.
