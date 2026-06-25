@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ============================================================= -->
+  <!--  EDIT YOUR BUSINESS NAME / TAGLINE / CONTACT IN ONE PLACE:    -->
+  <!--  search for the word  PLACEHOLDER  below to find them all.     -->
+  <!-- ============================================================= -->
+  <title>The Seasonal Table — Kitchen &amp; Catering</title>
+  <meta name="description" content="A rotating, seasonal menu crafted with care — full-service catering for events of every size." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --cream:    #f6f1e7;
+      --cream-2:  #efe7d6;
+      --paper:    #fbf8f1;
+      --ink:      #2c2420;
+      --brick:    #7c2d2d;   /* deep red headings (from the menu) */
+      --brick-2:  #8f3a32;
+      --brown:    #9a6a3c;   /* warm accent / buttons */
+      --brown-d:  #7d5430;
+      --muted:    #8a7e70;
+      --line:     #d9cdb6;
+      --shadow:   0 10px 30px rgba(60, 40, 20, 0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .display { font-family: 'Playfair Display', Georgia, serif; }
+
+    .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    .eyebrow {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--brown);
+      font-weight: 600;
+    }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      display: inline-block;
+      background: var(--brown);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.8rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 14px 30px;
+      border-radius: 2px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .btn:hover { background: var(--brown-d); transform: translateY(-2px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--brick);
+      border: 1px solid var(--brick);
+    }
+    .btn-ghost:hover { background: var(--brick); color: #fff; }
+
+    /* ---------- Nav ---------- */
+    header.nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(246, 241, 231, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 70px;
+    }
+    .brand { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.3rem; color: var(--brick); text-decoration: none; letter-spacing: 0.02em; }
+    .brand small { display:block; font-family:'Inter',sans-serif; font-size:0.58rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--brown); font-weight:600; margin-top:1px;}
+    nav.links a {
+      color: var(--ink); text-decoration: none; font-size: 0.82rem;
+      font-weight: 500; margin-left: 28px; letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    nav.links a:hover { color: var(--brick); }
+    .nav-cta { margin-left: 28px; padding: 10px 20px; }
+    .menu-toggle { display:none; background:none; border:none; font-size:1.5rem; color:var(--brick); cursor:pointer; }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      text-align: center;
+      padding: 90px 0 80px;
+      background:
+        radial-gradient(120% 80% at 50% -10%, var(--paper), transparent 60%),
+        var(--cream);
+      border-bottom: 1px solid var(--line);
+    }
+    .hero .divider { width: 46px; height: 2px; background: var(--brown); margin: 22px auto; }
+    .hero h1 {
+      font-size: clamp(2.6rem, 6vw, 4.4rem);
+      color: var(--brick);
+      font-weight: 700;
+      line-height: 1.05;
+      margin: 6px 0 4px;
+    }
+    .hero p.lead {
+      font-style: italic;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+      color: var(--muted);
+      max-width: 540px;
+      margin: 12px auto 30px;
+    }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* ---------- Section frames ---------- */
+    section { padding: 78px 0; }
+    .section-head { text-align: center; margin-bottom: 50px; }
+    .section-head h2 { font-size: clamp(2rem, 4vw, 2.8rem); color: var(--brick); margin: 8px 0; }
+    .section-head .divider { width: 46px; height: 2px; background: var(--brown); margin: 16px auto 0; }
+
+    /* ---------- Features ---------- */
+    .features { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .feat { text-align: center; padding: 14px; }
+    .feat .ic { font-size: 2rem; margin-bottom: 12px; }
+    .feat h3 { color: var(--brick); font-size: 1.25rem; margin-bottom: 8px; }
+    .feat p { color: var(--muted); font-size: 0.95rem; }
+
+    /* ---------- Menu ---------- */
+    .week-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 38px; }
+    .tab {
+      font-family: 'Inter', sans-serif;
+      background: transparent; border: 1px solid var(--line);
+      color: var(--ink); padding: 11px 26px; border-radius: 2px;
+      cursor: pointer; font-weight: 600; font-size: 0.78rem;
+      letter-spacing: 0.18em; text-transform: uppercase; transition: all 0.2s;
+    }
+    .tab.active { background: var(--brown); color: #fff; border-color: var(--brown); }
+
+    .week { display: none; }
+    .week.active { display: block; animation: fade 0.4s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+
+    .day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+    .day-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 26px 26px 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .day-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--brick); }
+    .day-name { color: var(--brick); font-size: 1.45rem; margin-bottom: 4px; }
+    .day-card .soup { font-style: italic; color: var(--muted); font-family:'Playfair Display',serif; font-size: 0.95rem; margin-bottom: 16px; }
+    .day-main { font-weight: 600; font-size: 1.05rem; margin-bottom: 12px; color: var(--ink); }
+    .row { display: flex; gap: 10px; font-size: 0.9rem; padding: 7px 0; border-top: 1px dashed var(--line); }
+    .row .k { flex: 0 0 96px; font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brown); font-weight: 600; padding-top: 2px; }
+    .row .v { color: var(--ink); }
+    .alts { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; padding: 5px 11px; border-radius: 20px; }
+    .pill.veg { background: #e7eddb; color: #4d6b2f; }
+    .pill.gf  { background: #f0e3d2; color: #8a5a25; }
+    .menu-note { text-align: center; margin-top: 34px; color: var(--muted); font-style: italic; font-family:'Playfair Display',serif; }
+    .bev { text-align:center; margin-top:8px; font-size:0.74rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--brown); font-weight:600; }
+
+    /* ---------- Catering ---------- */
+    .catering { background: var(--brick); color: var(--cream); }
+    .catering .section-head h2, .catering .eyebrow { color: var(--cream); }
+    .catering .eyebrow { color: #e7c9a3; }
+    .catering .section-head .divider { background: #e7c9a3; }
+    .cater-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 44px; }
+    .cater-item { text-align:center; }
+    .cater-item .ic { font-size:1.8rem; margin-bottom:10px; }
+    .cater-item h3 { font-size:1.15rem; margin-bottom:6px; color:#fff; }
+    .cater-item p { font-size:0.88rem; color: rgba(246,241,231,0.78); }
+    .cater-cta { text-align:center; }
+    .cater-cta .btn { background:#e7c9a3; color:var(--brick); }
+    .cater-cta .btn:hover { background:#fff; }
+
+    /* ---------- Contact ---------- */
+    .contact { background: var(--paper); }
+    .form-card {
+      max-width: 660px; margin: 0 auto;
+      background: var(--cream); border: 1px solid var(--line);
+      border-radius: 6px; padding: 40px; box-shadow: var(--shadow);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .field { display: flex; flex-direction: column; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brown); font-weight: 600; margin-bottom: 7px; }
+    .field input, .field select, .field textarea {
+      font-family: 'Inter', sans-serif; font-size: 0.95rem;
+      padding: 12px 14px; border: 1px solid var(--line);
+      border-radius: 3px; background: var(--paper); color: var(--ink);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none; border-color: var(--brown);
+      box-shadow: 0 0 0 3px rgba(154,106,60,0.15);
+    }
+    .field textarea { resize: vertical; min-height: 110px; }
+    .form-submit { text-align: center; margin-top: 24px; }
+    .form-msg { text-align: center; margin-top: 18px; font-weight: 600; color: var(--brick); min-height: 1.2em; }
+
+    /* ---------- Footer ---------- */
+    footer.site {
+      background: var(--ink); color: var(--cream-2);
+      text-align: center; padding: 46px 0;
+    }
+    footer.site .brand { color: #fff; }
+    footer.site p { font-size: 0.85rem; color: rgba(246,241,231,0.6); margin-top: 12px; }
+    footer.site .divider { width: 40px; height: 2px; background: var(--brown); margin: 18px auto; }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 760px) {
+      nav.links { display: none; position: absolute; top: 70px; left: 0; right: 0; background: var(--cream); flex-direction: column; padding: 14px 24px; border-bottom: 1px solid var(--line); }
+      nav.links.open { display: flex; }
+      nav.links a { margin: 8px 0; }
+      .nav-cta { margin: 12px 0 4px; }
+      .menu-toggle { display: block; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .cater-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-card { padding: 28px 22px; }
+      section { padding: 56px 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== NAV ===================== -->
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <!-- PLACEHOLDER: business name -->
+      <a class="brand" href="#top">The Seasonal Table<small>Kitchen &amp; Catering</small></a>
+      <button class="menu-toggle" aria-label="Menu" onclick="document.getElementById('links').classList.toggle('open')">☰</button>
+      <nav class="links" id="links">
+        <a href="#menu">Menu</a>
+        <a href="#catering">Catering</a>
+        <a href="#about">About</a>
+        <a class="btn nav-cta" href="#contact">Book an Event</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" id="top" style="padding-top:90px;">
+    <div class="wrap">
+      <span class="eyebrow">Fresh &nbsp;·&nbsp; Seasonal &nbsp;·&nbsp; Made Daily</span>
+      <div class="divider"></div>
+      <!-- PLACEHOLDER: business name -->
+      <h1>The Seasonal Table</h1>
+      <p class="lead">A rotating selection crafted with care — comforting plates and full-service catering for events of every size.</p>
+      <div class="hero-actions">
+        <a class="btn" href="#menu">View the Menu</a>
+        <a class="btn btn-ghost" href="#contact">Book Catering</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURES ===================== -->
+  <section class="features">
+    <div class="wrap feat-grid">
+      <div class="feat">
+        <div class="ic">🌿</div>
+        <h3>Seasonal &amp; Scratch-Made</h3>
+        <p>A two-week rotating menu built around fresh, in-season ingredients and made-daily soups.</p>
+      </div>
+      <div class="feat">
+        <div class="ic">🍽️</div>
+        <h3>Everyone at the Table</h3>
+        <p>Every entrée includes vegetarian and gluten-friendly alternatives, so no guest is left out.</p>
+      </div>
+      <div class="feat">
+        <div class="ic">🎉</div>
+        <h3>Catering for Any Event</h3>
+        <p>From office lunches to weddings, we plate, deliver, and serve so you can enjoy the day.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MENU ===================== -->
+  <section id="menu">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">A Rotating Selection Crafted With Care</span>
+        <h2>Weekly Menu</h2>
+        <div class="divider"></div>
+      </div>
+
+      <div class="week-tabs">
+        <button class="tab active" data-week="1" onclick="showWeek(1, this)">Week One</button>
+        <button class="tab" data-week="2" onclick="showWeek(2, this)">Week Two</button>
+      </div>
+
+      <!-- WEEK 1 -->
+      <div class="week active" id="week-1">
+        <div class="day-grid" id="grid-1"></div>
+      </div>
+
+      <!-- WEEK 2 -->
+      <div class="week" id="week-2">
+        <div class="day-grid" id="grid-2"></div>
+      </div>
+
+      <p class="menu-note">Every meal includes a seasonal fruit cup &amp; complimentary beverage station.</p>
+      <p class="bev">Iced Tea &nbsp;·&nbsp; Lemonade &nbsp;·&nbsp; Water</p>
+    </div>
+  </section>
+
+  <!-- ===================== CATERING ===================== -->
+  <section class="catering" id="catering">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Full-Service Catering</span>
+        <h2>Let Us Cater Your Event</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="cater-grid">
+        <div class="cater-item"><div class="ic">💼</div><h3>Corporate</h3><p>Boxed lunches, buffets &amp; meeting catering.</p></div>
+        <div class="cater-item"><div class="ic">💍</div><h3>Weddings</h3><p>Plated dinners &amp; elegant reception spreads.</p></div>
+        <div class="cater-item"><div class="ic">🎂</div><h3>Celebrations</h3><p>Birthdays, showers &amp; family gatherings.</p></div>
+        <div class="cater-item"><div class="ic">🏛️</div><h3>Large Events</h3><p>Fundraisers, schools &amp; community functions.</p></div>
+      </div>
+      <div class="cater-cta">
+        <a class="btn" href="#contact">Request a Catering Quote</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ABOUT ===================== -->
+  <section id="about">
+    <div class="wrap" style="max-width:760px; text-align:center;">
+      <div class="section-head" style="margin-bottom:24px;">
+        <span class="eyebrow">Our Kitchen</span>
+        <h2>Cooked With Care, Served With Heart</h2>
+        <div class="divider"></div>
+      </div>
+      <p style="color:var(--muted); font-size:1.05rem;">
+        We believe great food brings people together. Our kitchen prepares a rotating, seasonal
+        menu from scratch each day — hearty mains, fresh sides, and made-daily soups — with
+        thoughtful vegetarian and gluten-friendly options on every plate. Whether you're feeding
+        a team, a family, or a few hundred guests, we'd love to cook for you.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== CONTACT ===================== -->
+  <section class="contact" id="contact">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Get In Touch</span>
+        <h2>Plan Your Catering Event</h2>
+        <div class="divider"></div>
+      </div>
+
+      <form class="form-card" id="contactForm" onsubmit="return handleSubmit(event)">
+        <div class="form-grid">
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" required placeholder="Your name" />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required placeholder="you@example.com" />
+          </div>
+          <div class="field">
+            <label for="event">Event Type</label>
+            <select id="event" name="event">
+              <option>Corporate / Office</option>
+              <option>Wedding</option>
+              <option>Birthday / Celebration</option>
+              <option>Large Event / Fundraiser</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="guests">Estimated Guests</label>
+            <input id="guests" name="guests" type="number" min="1" placeholder="e.g. 50" />
+          </div>
+          <div class="field">
+            <label for="date">Event Date</label>
+            <input id="date" name="date" type="date" />
+          </div>
+          <div class="field">
+            <label for="phone">Phone (optional)</label>
+            <input id="phone" name="phone" type="tel" placeholder="(555) 555-5555" />
+          </div>
+          <div class="field full">
+            <label for="message">Tell us about your event</label>
+            <textarea id="message" name="message" placeholder="Menu preferences, location, timing, dietary needs..."></textarea>
+          </div>
+        </div>
+        <div class="form-submit">
+          <button class="btn" type="submit">Send Inquiry</button>
+        </div>
+        <p class="form-msg" id="formMsg" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="site">
+    <div class="wrap">
+      <!-- PLACEHOLDER: business name -->
+      <a class="brand" href="#top">The Seasonal Table</a>
+      <div class="divider"></div>
+      <p>Fresh · Seasonal · Made Daily &nbsp;—&nbsp; Catering for events of every size.</p>
+      <p>&copy; <span id="year"></span> The Seasonal Table. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    /* ============================================================
+       MENU DATA — transcribed from the menu photo.
+       Double-check wording & feel free to edit any item below.
+       ============================================================ */
+    const MENU = {
+      1: [
+        { day: "Monday",    main: "Grilled Chicken Sandwich", soup: "Classic Noodle Soup",
+          sides: "Yucca Fries, Garden Salad", dessert: "Cookies",
+          veg: "Grilled Vegetable Wrap", gf: "Grilled Chicken (no bun)" },
+        { day: "Tuesday",   main: "Beef Tacos", soup: "Garlic Soup",
+          sides: "Spanish Rice, Black Beans", dessert: "Churro Bites",
+          veg: "Roasted Veggie Tacos", gf: "Corn Tortilla Tacos" },
+        { day: "Wednesday", main: "BBQ Pulled Pork", soup: "Vegetable Soup",
+          sides: "Mac &amp; Cheese, Coleslaw", dessert: "Fruit Cup",
+          veg: "BBQ Jackfruit Sandwich", gf: "BBQ Pulled Pork Plate" },
+        { day: "Thursday",  main: "Chicken Alfredo", soup: "Tomato Basil Soup",
+          sides: "Caesar Salad, Garlic Bread", dessert: "Chocolate Pudding",
+          veg: "Vegan Pasta Primavera", gf: "Grilled Chicken w/ GF Pasta" },
+        { day: "Friday",    main: "Cheeseburgers", soup: "Loaded Baked Potato Soup",
+          sides: "French Fries, Garden Salad", dessert: "Brownies",
+          veg: "Black Bean Burger", gf: "Mushroom Cheeseburger (no bun)" },
+      ],
+      2: [
+        { day: "Monday",    main: "Teriyaki Chicken Bowls", soup: "Miso Vegetable Soup",
+          sides: "Steamed Rice, Vegetables", dessert: "Fruit Cup",
+          veg: "Teriyaki Tofu Bowl", gf: "GF Teriyaki Chicken Bowl" },
+        { day: "Tuesday",   main: "Meatball Subs", soup: "Italian Wedding Soup",
+          sides: "Chips, Side Salad", dessert: "Cookies",
+          veg: "Lentil Meatball Sub", gf: "Meatballs over Rice" },
+        { day: "Wednesday", main: "Chicken Fajitas", soup: "Black Bean Soup",
+          sides: "Rice, Pinto Beans", dessert: "Sopapilla",
+          veg: "Veggie Fajitas", gf: "Corn Tortilla Fajitas" },
+        { day: "Thursday",  main: "Roast Turkey &amp; Gravy", soup: "Creamy Vegetable Soup",
+          sides: "Mashed Potatoes, Green Beans", dessert: "Apple Crisp",
+          veg: "Stuffed Bell Peppers", gf: "Turkey Plate w/ GF Gravy" },
+        { day: "Friday",    main: "Fish Tacos", soup: "Seafood Chowder",
+          sides: "Cilantro Rice, Corn Salad", dessert: "Key Lime Bars",
+          veg: "Crispy Cauliflower Tacos", gf: "Corn Tortilla Fish Tacos" },
+      ]
+    };
+
+    function renderWeek(n) {
+      const grid = document.getElementById('grid-' + n);
+      grid.innerHTML = MENU[n].map(d => `
+        <div class="day-card">
+          <h3 class="day-name">${d.day}</h3>
+          <p class="soup">Soup of the day · ${d.soup}</p>
+          <p class="day-main">${d.main}</p>
+          <div class="row"><span class="k">Sides</span><span class="v">${d.sides}</span></div>
+          <div class="row"><span class="k">Dessert</span><span class="v">${d.dessert}</span></div>
+          <div class="alts">
+            <span class="pill veg">🌱 Veg · ${d.veg}</span>
+            <span class="pill gf">🌾 GF · ${d.gf}</span>
+          </div>
+        </div>`).join('');
+    }
+    renderWeek(1); renderWeek(2);
+
+    function showWeek(n, btn) {
+      document.querySelectorAll('.week').forEach(w => w.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('week-' + n).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    /* ---------- Contact form ----------
+       Static (GitHub Pages) — no server. This shows a confirmation
+       message on submit. To receive submissions by email, create a
+       free form endpoint at https://formspree.io and replace the
+       handler below with:  <form action="https://formspree.io/f/XXXX" method="POST">
+    */
+    function handleSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim() || 'there';
+      document.getElementById('contactForm').reset();
+      document.getElementById('formMsg').textContent =
+        `Thank you, ${name}! Your inquiry has been received — we'll be in touch shortly.`;
+      return false;
+    }
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // close mobile menu after clicking a link
+    document.querySelectorAll('nav.links a').forEach(a =>
+      a.addEventListener('click', () => document.getElementById('links').classList.remove('open')));
+  </script>
+</body>
+</html>
