@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Keep this page out of search engines. NOTE: the page is still publicly
+       reachable by anyone with the URL; this only prevents indexing. -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>FreaksMC Creator Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg:#0f1216;--panel:#181d24;--panel-2:#1f2731;--border:#2b3440;
+      --text:#e6eaef;--muted:#8a97a6;--accent:#5ad17a;--accent-dim:#2f8c4c;--danger:#e5536b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--border)}
+    .brand{font-weight:700;font-size:16px;color:var(--text)}.brand span{color:var(--accent)}
+    .topbar nav button{margin-left:10px}
+    main{max-width:1180px;margin:0 auto;padding:24px}
+    .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+    .card-accent{border-color:var(--accent-dim);background:linear-gradient(160deg,var(--panel),rgba(47,140,76,.18))}
+    .card-num{font-size:26px;font-weight:700}
+    .card-label{color:var(--muted);margin-top:4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    .card-sub{color:var(--muted);font-size:12px;margin-top:2px}
+    .funnel{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+    .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--panel-2)}
+    .pill-sent{color:#9fb3c8}.pill-replied{color:#6cb6ff;border-color:#2b5c8a}
+    .pill-negotiating{color:#ffcf5c;border-color:#8a712b}.pill-live{color:var(--accent);border-color:var(--accent-dim)}
+    .pill-dead{color:#e5536b;border-color:#7a2b38}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .io-actions{display:flex;gap:10px;align-items:center}
+    input,select,textarea,button{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+    input::placeholder{color:var(--muted)}
+    button,.btn{background:var(--accent-dim);border:1px solid var(--accent-dim);color:#fff;cursor:pointer;font-weight:600}
+    button:hover,.btn:hover{background:var(--accent);border-color:var(--accent)}
+    .btn-link{background:none;border:none;color:var(--muted)}.btn-link:hover{background:none;color:var(--text)}
+    .grid{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .grid th,.grid td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+    .grid th{background:var(--panel-2);color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;user-select:none}
+    .grid tr:last-child td{border-bottom:none}
+    .creator-name{font-weight:600}
+    .creator-meta{color:var(--muted);font-size:12px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+    .grid code{background:var(--panel-2);padding:2px 7px;border-radius:6px;color:var(--accent)}
+    .row-actions{display:flex;gap:10px;align-items:center}
+    .link-danger{background:none;border:none;color:var(--danger);padding:0;font-weight:600;cursor:pointer}
+    .link-danger:hover{text-decoration:underline}
+    .notes-row td{color:var(--muted);font-size:13px;background:rgba(0,0,0,.15)}
+    .notes-label{color:var(--text);font-weight:600}
+    .empty{padding:40px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--border);border-radius:12px}
+    .footer{text-align:center;color:var(--muted);padding:24px;font-size:12px}
+    /* Modal */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+    .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:760px}
+    .modal h2{margin:0 0 18px}
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .modal label{display:flex;flex-direction:column;gap:6px;font-weight:600;color:var(--muted);font-size:13px}
+    .modal label.full{margin-top:16px}
+    .modal input,.modal select,.modal textarea{font-weight:400;color:var(--text)}
+    .modal small{font-weight:400;color:var(--muted)}
+    .code-row{display:flex;gap:8px}.code-row input{flex:1}
+    .form-actions{margin-top:20px;display:flex;gap:12px;align-items:center}
+    /* Login gate */
+    #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
+    .gate-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px;width:320px;text-align:center}
+    .gate-box h1{font-size:18px;margin:0 0 4px}
+    .gate-box p{color:var(--muted);font-size:12px;margin:0 0 18px}
+    .gate-box input{width:100%;margin-bottom:10px}
+    .gate-err{color:var(--danger);font-size:13px;min-height:18px}
+    @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.field-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+  <!-- Cosmetic gate. NOT real security: credentials live in this public source
+       and anyone can bypass via DevTools. A light speed-bump only. -->
+  <div id="gate">
+    <div class="gate-box">
+      <h1>Freaks<span style="color:var(--accent)">MC</span> Tracker</h1>
+      <p>Internal tool — please sign in</p>
+      <input type="text" id="gate-user" placeholder="Username" autocomplete="off">
+      <input type="password" id="gate-pass" placeholder="Password" autocomplete="off">
+      <button class="btn" style="width:100%" onclick="tryLogin()">Sign in</button>
+      <div class="gate-err" id="gate-err"></div>
+    </div>
+  </div>
+
+  <div id="app" style="display:none">
+    <header class="topbar">
+      <span class="brand">Freaks<span>MC</span> · Creator Tracker</span>
+      <nav>
+        <button class="btn" onclick="openForm()">+ Add Creator</button>
+        <button class="btn-link" onclick="openSettings()">Settings</button>
+        <button class="btn-link" onclick="signOut()">Sign out</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="cards" id="cards"></section>
+      <section class="funnel" id="funnel"></section>
+
+      <section class="toolbar">
+        <div class="filters">
+          <select id="f-status" onchange="render()">
+            <option value="">All statuses</option>
+          </select>
+          <input type="number" id="f-min" placeholder="Min subs" oninput="render()" style="width:110px">
+          <input type="number" id="f-max" placeholder="Max subs" oninput="render()" style="width:110px">
+          <button class="btn-link" onclick="resetFilters()">Reset</button>
+        </div>
+        <div class="io-actions">
+          <button class="btn" onclick="exportXlsx()">Export .xlsx</button>
+          <label class="btn" style="cursor:pointer">Import
+            <input type="file" accept=".xlsx" onchange="importXlsx(event)" style="display:none">
+          </label>
+        </div>
+      </section>
+
+      <div id="table"></div>
+    </main>
+
+    <footer class="footer">FreaksMC internal tool · runs in your browser · data saved locally (localStorage)</footer>
+  </div>
+
+  <div id="modal-root"></div>
+
+  <script>
+  // ----------------------------------------------------------------------- //
+  // Cosmetic auth gate (see warning above — not real security)
+  // ----------------------------------------------------------------------- //
+  const GATE_USER = "samc";
+  const GATE_PASS = "samc4153";
+
+  function tryLogin(){
+    const u = document.getElementById('gate-user').value.trim();
+    const p = document.getElementById('gate-pass').value;
+    if(u === GATE_USER && p === GATE_PASS){
+      sessionStorage.setItem('freaksmc_auth','1');
+      showApp();
+    } else {
+      document.getElementById('gate-err').textContent = 'Incorrect username or password.';
+    }
+  }
+  function showApp(){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  }
+  function signOut(){
+    sessionStorage.removeItem('freaksmc_auth');
+    location.reload();
+  }
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && document.getElementById('gate').style.display!=='none') tryLogin();
+  });
+  // The auto-resume check runs at the very bottom of this script, after all
+  // consts/functions below are initialized (otherwise showApp()->init() hits a
+  // temporal-dead-zone error on STATUSES when reloading an authed session).
+
+  // ----------------------------------------------------------------------- //
+  // Data layer (localStorage)
+  // ----------------------------------------------------------------------- //
+  const STATUSES = ["Sent","Replied","Negotiating","Live","Dead"];
+  const RESPONDED = new Set(["Replied","Negotiating","Live"]);
+  const DEFAULT_SETTINGS = {default_rate:5.0, currency:"$", code_prefix:"", code_suffix:"10"};
+  const FIELDS = ["name","youtube_link","subscriber_count","niche","discord_link",
+                  "discord_username","contact_date","status","affiliate_code",
+                  "signups","rate","notes"];
+
+  function loadCreators(){
+    try{ return JSON.parse(localStorage.getItem('freaksmc_creators')) || []; }
+    catch(e){ return []; }
+  }
+  function saveCreators(list){ localStorage.setItem('freaksmc_creators', JSON.stringify(list)); }
+  function loadSettings(){
+    let s = {...DEFAULT_SETTINGS};
+    try{ Object.assign(s, JSON.parse(localStorage.getItem('freaksmc_settings'))||{}); }catch(e){}
+    s.default_rate = parseFloat(s.default_rate); if(isNaN(s.default_rate)) s.default_rate = 5.0;
+    return s;
+  }
+  function saveSettings(s){ localStorage.setItem('freaksmc_settings', JSON.stringify(s)); }
+
+  let editingId = null;
+  // Table sort state.
+  let sortKey = 'contact_date', sortDir = 'desc';
+
+  function nextId(list){ return list.reduce((m,r)=>Math.max(m, r.id||0), 0) + 1; }
+
+  // ----------------------------------------------------------------------- //
+  // Helpers: coercion, commission, affiliate code
+  // ----------------------------------------------------------------------- //
+  function toInt(v){ if(v===''||v==null) return 0; const n=parseInt(String(v).replace(/,/g,'').trim(),10); return isNaN(n)?0:n; }
+  function toRate(v){ if(v===''||v==null) return null; const n=parseFloat(String(v).replace(/,/g,'').trim()); return isNaN(n)?null:n; }
+
+  function effectiveRate(r, settings){ return r.rate==null ? settings.default_rate : r.rate; }
+  function commission(r, settings){ return (r.signups||0) * effectiveRate(r, settings); }
+
+  function generateCode(handle, settings){
+    handle = (handle||'').trim();
+    const urlMatch = handle.match(/youtube\.com\/(?:@?([\w.\-]+))/i);
+    if(urlMatch) handle = urlMatch[1];
+    handle = handle.replace(/^@/,'');
+    const core = handle.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    if(!core) return '';
+    const prefix = String(settings.code_prefix||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    const suffix = String(settings.code_suffix||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    return prefix + core + suffix;
+  }
+
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ----------------------------------------------------------------------- //
+  // Rendering
+  // ----------------------------------------------------------------------- //
+  function init(){
+    const sel = document.getElementById('f-status');
+    if(sel.options.length===1){
+      STATUSES.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+    }
+    render();
+  }
+
+  function filteredSorted(){
+    const settings = loadSettings();
+    let list = loadCreators().map(r=>({...r, _rate:effectiveRate(r,settings), _commission:commission(r,settings)}));
+    const fstatus = document.getElementById('f-status').value;
+    const fmin = document.getElementById('f-min').value;
+    const fmax = document.getElementById('f-max').value;
+    if(fstatus) list = list.filter(r=>r.status===fstatus);
+    if(fmin!=='') list = list.filter(r=>(r.subscriber_count||0) >= toInt(fmin));
+    if(fmax!=='') list = list.filter(r=>(r.subscriber_count||0) <= toInt(fmax));
+
+    const key = sortKey==='commission' ? '_commission' : sortKey;
+    list.sort((a,b)=>{
+      let av=a[key], bv=b[key];
+      const an = typeof av==='number', bn = typeof bv==='number';
+      if(an&&bn){ return av-bv; }
+      av=String(av==null?'':av).toLowerCase(); bv=String(bv==null?'':bv).toLowerCase();
+      return av<bv?-1:av>bv?1:0;
+    });
+    if(sortDir==='desc') list.reverse();
+    return list;
+  }
+
+  function render(){
+    const settings = loadSettings();
+    const all = loadCreators().map(r=>({...r, _commission:commission(r,settings)}));
+    const cur = settings.currency;
+
+    // Summary across the whole pipeline (not the filtered view).
+    const total = all.length;
+    const responded = all.filter(r=>RESPONDED.has(r.status)).length;
+    const live = all.filter(r=>r.status==='Live').length;
+    const totalSignups = all.reduce((s,r)=>s+(r.signups||0),0);
+    const totalComm = all.reduce((s,r)=>s+r._commission,0);
+    const respRate = total? (responded/total*100):0;
+    const convRate = total? (live/total*100):0;
+
+    document.getElementById('cards').innerHTML = `
+      <div class="card"><div class="card-num">${total}</div><div class="card-label">Total Outreached</div></div>
+      <div class="card"><div class="card-num">${respRate.toFixed(1)}%</div><div class="card-label">Response Rate</div><div class="card-sub">${responded} replied</div></div>
+      <div class="card"><div class="card-num">${convRate.toFixed(1)}%</div><div class="card-label">Live Conversion</div><div class="card-sub">${live} live</div></div>
+      <div class="card"><div class="card-num">${totalSignups}</div><div class="card-label">Total Signups</div></div>
+      <div class="card card-accent"><div class="card-num">${cur}${totalComm.toFixed(2)}</div><div class="card-label">Commission Owed</div></div>`;
+
+    const byStatus = {}; STATUSES.forEach(s=>byStatus[s]=0);
+    all.forEach(r=>{ if(byStatus[r.status]!=null) byStatus[r.status]++; });
+    document.getElementById('funnel').innerHTML = STATUSES.map(s=>
+      `<span class="pill pill-${s.toLowerCase()}">${s}: ${byStatus[s]}</span>`).join('');
+
+    const list = filteredSorted();
+    const arrow = k => sortKey===k ? (sortDir==='asc'?' ▲':' ▼') : '';
+    if(list.length===0){
+      document.getElementById('table').innerHTML =
+        `<div class="empty">No creators match. Click <b>+ Add Creator</b> or import an .xlsx.</div>`;
+      return;
+    }
+    const rows = list.map(r=>{
+      const meta = [
+        r.youtube_link?`<a href="${esc(r.youtube_link)}" target="_blank" rel="noopener">YouTube</a>`:'',
+        r.discord_link?`<a href="${esc(r.discord_link)}" target="_blank" rel="noopener">Discord</a>`:'',
+        r.discord_username?`<span>@${esc(r.discord_username)}</span>`:''
+      ].filter(Boolean).join(' ');
+      const notesRow = r.notes ? `<tr class="notes-row"><td colspan="10"><span class="notes-label">Notes:</span> ${esc(r.notes)}</td></tr>`:'';
+      return `<tr>
+        <td><div class="creator-name">${esc(r.name)}</div><div class="creator-meta">${meta}</div></td>
+        <td>${(r.subscriber_count||0).toLocaleString()}</td>
+        <td>${esc(r.niche)}</td>
+        <td><span class="pill pill-${(r.status||'').toLowerCase()}">${esc(r.status)}</span></td>
+        <td><code>${esc(r.affiliate_code)}</code></td>
+        <td>${r.signups||0}</td>
+        <td>${cur}${r._rate.toFixed(2)}</td>
+        <td>${cur}${r._commission.toFixed(2)}</td>
+        <td>${esc(r.contact_date)}</td>
+        <td class="row-actions">
+          <a href="#" onclick="openForm(${r.id});return false">Edit</a>
+          <button class="link-danger" onclick="removeCreator(${r.id})">Delete</button>
+        </td></tr>${notesRow}`;
+    }).join('');
+    document.getElementById('table').innerHTML = `
+      <table class="grid"><thead><tr>
+        <th onclick="setSort('name')">Creator${arrow('name')}</th>
+        <th onclick="setSort('subscriber_count')">Subs${arrow('subscriber_count')}</th>
+        <th>Niche</th>
+        <th onclick="setSort('status')">Status${arrow('status')}</th>
+        <th>Affiliate Code</th>
+        <th onclick="setSort('signups')">Signups${arrow('signups')}</th>
+        <th>Rate</th>
+        <th onclick="setSort('commission')">Commission${arrow('commission')}</th>
+        <th onclick="setSort('contact_date')">Contact${arrow('contact_date')}</th>
+        <th></th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function setSort(key){
+    if(sortKey===key){ sortDir = sortDir==='asc'?'desc':'asc'; }
+    else { sortKey=key; sortDir='asc'; }
+    render();
+  }
+  function resetFilters(){
+    document.getElementById('f-status').value='';
+    document.getElementById('f-min').value='';
+    document.getElementById('f-max').value='';
+    render();
+  }
+
+  // ----------------------------------------------------------------------- //
+  // Add / edit / delete
+  // ----------------------------------------------------------------------- //
+  function openForm(id){
+    const settings = loadSettings();
+    editingId = id || null;
+    const r = id ? loadCreators().find(x=>x.id===id) : {};
+    const v = (k,d='')=> r && r[k]!=null ? r[k] : d;
+    const opt = STATUSES.map(s=>`<option value="${s}" ${ (r.status||'Sent')===s?'selected':'' }>${s}</option>`).join('');
+    document.getElementById('modal-root').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>${id?'Edit Creator':'Add Creator'}</h2>
+        <div class="field-grid">
+          <label>Creator name *<input id="m-name" value="${esc(v('name'))}"></label>
+          <label>YouTube channel link<input id="m-youtube_link" value="${esc(v('youtube_link'))}" placeholder="https://youtube.com/@handle"></label>
+          <label>Subscriber count<input id="m-subscriber_count" type="number" min="0" value="${esc(v('subscriber_count'))}"></label>
+          <label>Niche<input id="m-niche" list="niches" value="${esc(v('niche'))}" placeholder="Survival SMP, Skyblock, PvP…">
+            <datalist id="niches"><option value="Survival SMP"><option value="Skyblock"><option value="PvP"><option value="Minigames"><option value="Modded"><option value="Creative/Build"></datalist></label>
+          <label>Discord server link<input id="m-discord_link" value="${esc(v('discord_link'))}" placeholder="https://discord.gg/…"></label>
+          <label>Discord username<input id="m-discord_username" value="${esc(v('discord_username'))}"></label>
+          <label>Contact date<input id="m-contact_date" type="date" value="${esc(v('contact_date', todayISO()))}"></label>
+          <label>Ticket status<select id="m-status">${opt}</select></label>
+          <label>Affiliate code
+            <div class="code-row">
+              <input id="m-affiliate_code" value="${esc(v('affiliate_code'))}" placeholder="auto-generated if blank">
+              <button type="button" class="btn" onclick="genCodeInForm()">Generate</button>
+            </div>
+            <small>Pattern: ${esc(settings.code_prefix)}HANDLE${esc(settings.code_suffix)} (set in Settings)</small></label>
+          <label>Signups generated<input id="m-signups" type="number" min="0" value="${esc(v('signups',0))}"></label>
+          <label>Per-signup rate (${esc(settings.currency)})<input id="m-rate" type="number" step="0.01" min="0" value="${r.rate!=null?esc(r.rate):''}" placeholder="blank = default ${esc(settings.currency)}${settings.default_rate.toFixed(2)}">
+            <small>Leave blank to use the global default.</small></label>
+        </div>
+        <label class="full">Notes<textarea id="m-notes" rows="4">${esc(v('notes'))}</textarea></label>
+        <div class="form-actions">
+          <button class="btn" onclick="saveForm()">${id?'Save changes':'Add creator'}</button>
+          <button class="btn-link" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+    document.getElementById('m-name').focus();
+  }
+
+  function genCodeInForm(){
+    const settings = loadSettings();
+    const handle = document.getElementById('m-youtube_link').value || document.getElementById('m-name').value;
+    const code = generateCode(handle, settings);
+    if(code) document.getElementById('m-affiliate_code').value = code;
+  }
+
+  function saveForm(){
+    const settings = loadSettings();
+    const g = k => { const el=document.getElementById('m-'+k); return el?el.value:''; };
+    const name = g('name').trim();
+    if(!name){ alert('Creator name is required.'); return; }
+    const rec = {
+      name,
+      youtube_link: g('youtube_link').trim(),
+      subscriber_count: toInt(g('subscriber_count')),
+      niche: g('niche').trim(),
+      discord_link: g('discord_link').trim(),
+      discord_username: g('discord_username').trim(),
+      contact_date: g('contact_date').trim() || todayISO(),
+      status: STATUSES.includes(g('status'))?g('status'):'Sent',
+      affiliate_code: g('affiliate_code').trim().toUpperCase(),
+      signups: toInt(g('signups')),
+      rate: toRate(g('rate')),
+      notes: g('notes').trim()
+    };
+    if(!rec.affiliate_code) rec.affiliate_code = generateCode(rec.youtube_link||rec.name, settings);
+    const list = loadCreators();
+    if(editingId){
+      const i = list.findIndex(x=>x.id===editingId);
+      if(i>=0) list[i] = {...list[i], ...rec};
+    } else {
+      rec.id = nextId(list);
+      list.push(rec);
+    }
+    saveCreators(list);
+    closeModal();
+    render();
+  }
+
+  function removeCreator(id){
+    const r = loadCreators().find(x=>x.id===id);
+    if(!confirm('Delete '+(r?r.name:'this creator')+'?')) return;
+    saveCreators(loadCreators().filter(x=>x.id!==id));
+    render();
+  }
+  function closeModal(){ document.getElementById('modal-root').innerHTML=''; editingId=null; }
+
+  // ----------------------------------------------------------------------- //
+  // Settings
+  // ----------------------------------------------------------------------- //
+  function openSettings(){
+    const s = loadSettings();
+    document.getElementById('modal-root').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>Settings</h2>
+        <div class="field-grid">
+          <label>Default per-signup rate<input id="s-default_rate" type="number" step="0.01" min="0" value="${s.default_rate.toFixed(2)}">
+            <small>Used when a creator has no own rate. Commission = signups × rate.</small></label>
+          <label>Currency symbol<input id="s-currency" maxlength="3" value="${esc(s.currency)}"></label>
+          <label>Affiliate code prefix<input id="s-code_prefix" value="${esc(s.code_prefix)}" placeholder="(optional)"><small>Before the handle, e.g. FREAKS.</small></label>
+          <label>Affiliate code suffix<input id="s-code_suffix" value="${esc(s.code_suffix)}" placeholder="(optional)"><small>After the handle, e.g. 10.</small></label>
+        </div>
+        <p style="color:var(--muted)">Example: <code>${esc(s.code_prefix)}STEVEBUILDS${esc(s.code_suffix)}</code></p>
+        <div class="form-actions">
+          <button class="btn" onclick="saveSettingsForm()">Save settings</button>
+          <button class="btn-link" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  function saveSettingsForm(){
+    const g = k => document.getElementById('s-'+k).value;
+    let rate = parseFloat(g('default_rate')); if(isNaN(rate)) rate = 5.0;
+    saveSettings({default_rate:rate, currency:(g('currency').trim()||'$'), code_prefix:g('code_prefix').trim(), code_suffix:g('code_suffix').trim()});
+    closeModal();
+    render();
+  }
+
+  // ----------------------------------------------------------------------- //
+  // Excel export / import (SheetJS)
+  // ----------------------------------------------------------------------- //
+  const EXPORT_COLUMNS = [
+    ["name","Creator Name"],["youtube_link","YouTube Channel"],["subscriber_count","Subscribers"],
+    ["niche","Niche"],["discord_link","Discord Server"],["discord_username","Discord Username"],
+    ["contact_date","Contact Date"],["status","Ticket Status"],["affiliate_code","Affiliate Code"],
+    ["signups","Signups"],["rate","Per-Signup Rate"],["_rate","Effective Rate"],
+    ["_commission","Commission Owed"],["notes","Notes"]
+  ];
+  function normHeader(t){ return String(t).toLowerCase().replace(/[^a-z0-9]/g,''); }
+
+  function exportXlsx(){
+    const settings = loadSettings();
+    const list = loadCreators().map(r=>({...r,_rate:effectiveRate(r,settings),_commission:commission(r,settings)}));
+    const header = EXPORT_COLUMNS.map(c=>c[1]);
+    const aoa = [header];
+    list.forEach(r=>{
+      aoa.push(EXPORT_COLUMNS.map(([f])=>{
+        let v = r[f];
+        if((f==='rate'||f==='_rate'||f==='_commission') && v!=null) v = Math.round(v*100)/100;
+        return v==null?'':v;
+      }));
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = EXPORT_COLUMNS.map(([f,h])=>({wch: Math.min(Math.max(h.length, ...list.map(r=>String(r[f]==null?'':r[f]).length), 8)+2, 45)}));
+    XLSX.utils.book_append_sheet(wb, ws, 'Creators');
+
+    const total=list.length, responded=list.filter(r=>RESPONDED.has(r.status)).length, live=list.filter(r=>r.status==='Live').length;
+    const summary = [["Metric","Value"],
+      ["Total outreached",total],["Responded",responded],["Live partnerships",live],
+      ["Response rate",(total?(responded/total*100):0).toFixed(1)+"%"],
+      ["Live conversion rate",(total?(live/total*100):0).toFixed(1)+"%"],
+      ["Total signups",list.reduce((s,r)=>s+(r.signups||0),0)],
+      ["Total commission owed",settings.currency+list.reduce((s,r)=>s+r._commission,0).toFixed(2)]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Summary');
+    XLSX.writeFile(wb, 'freaksmc_creators.xlsx');
+  }
+
+  function importXlsx(ev){
+    const file = ev.target.files[0];
+    if(!file) return;
+    const lookup = {};
+    EXPORT_COLUMNS.forEach(([f,h])=>{ if(!f.startsWith('_')){ lookup[normHeader(h)]=f; lookup[normHeader(f)]=f; } });
+    const reader = new FileReader();
+    reader.onload = e=>{
+      try{
+        const wb = XLSX.read(e.target.result, {type:'array'});
+        const sheet = wb.Sheets['Creators'] || wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1, blankrows:false});
+        if(rows.length<2){ alert('No data rows found.'); ev.target.value=''; return; }
+        const colMap = {};
+        rows[0].forEach((h,i)=>{ const f=lookup[normHeader(h)]; if(f) colMap[i]=f; });
+        const list = loadCreators();
+        let id = nextId(list), imported=0, skipped=0;
+        const settings = loadSettings();
+        for(let i=1;i<rows.length;i++){
+          const raw = rows[i]; const data={};
+          Object.entries(colMap).forEach(([idx,f])=>{ data[f]=raw[idx]; });
+          const name = String(data.name||'').trim();
+          if(!name){ skipped++; continue; }
+          list.push({
+            id: id++, name,
+            youtube_link:String(data.youtube_link||'').trim(),
+            subscriber_count:toInt(data.subscriber_count),
+            niche:String(data.niche||'').trim(),
+            discord_link:String(data.discord_link||'').trim(),
+            discord_username:String(data.discord_username||'').trim(),
+            contact_date:String(data.contact_date||'').trim()||todayISO(),
+            status:STATUSES.includes(String(data.status))?String(data.status):'Sent',
+            affiliate_code:(String(data.affiliate_code||'').trim().toUpperCase())||generateCode(data.youtube_link||name,settings),
+            signups:toInt(data.signups),
+            rate:toRate(data.rate),
+            notes:String(data.notes||'').trim()
+          });
+          imported++;
+        }
+        saveCreators(list);
+        render();
+        alert(`Imported ${imported} creator(s); skipped ${skipped} row(s).`);
+      }catch(err){ alert('Could not import file: '+err.message); }
+      ev.target.value='';
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // Resume an already-authenticated tab session. Must be last: everything it
+  // reaches (showApp -> init -> STATUSES, render, …) is defined above.
+  if(sessionStorage.getItem('freaksmc_auth')==='1'){ showApp(); }
+  </script>
+</body>
+</html>
