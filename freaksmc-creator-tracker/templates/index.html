@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set cur = settings.currency %}
+
+<section class="cards">
+  <div class="card">
+    <div class="card-num">{{ summary.total }}</div>
+    <div class="card-label">Total Outreached</div>
+  </div>
+  <div class="card">
+    <div class="card-num">{{ "%.1f"|format(summary.response_rate) }}%</div>
+    <div class="card-label">Response Rate</div>
+    <div class="card-sub">{{ summary.responded }} replied</div>
+  </div>
+  <div class="card">
+    <div class="card-num">{{ "%.1f"|format(summary.conversion_rate) }}%</div>
+    <div class="card-label">Live Conversion</div>
+    <div class="card-sub">{{ summary.live }} live</div>
+  </div>
+  <div class="card">
+    <div class="card-num">{{ summary.total_signups }}</div>
+    <div class="card-label">Total Signups</div>
+  </div>
+  <div class="card card-accent">
+    <div class="card-num">{{ cur }}{{ "%.2f"|format(summary.total_commission) }}</div>
+    <div class="card-label">Commission Owed</div>
+  </div>
+</section>
+
+<section class="funnel">
+  {% for status in statuses %}
+    <span class="pill pill-{{ status|lower }}">{{ status }}: {{ summary.by_status[status] }}</span>
+  {% endfor %}
+</section>
+
+<section class="toolbar">
+  <form class="filters" method="get" action="{{ url_for('index') }}">
+    <select name="status">
+      <option value="">All statuses</option>
+      {% for status in statuses %}
+        <option value="{{ status }}" {{ 'selected' if filters.status == status }}>{{ status }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" name="min_subs" placeholder="Min subs" value="{{ filters.min_subs }}">
+    <input type="number" name="max_subs" placeholder="Max subs" value="{{ filters.max_subs }}">
+    <select name="sort">
+      {% set sort_options = [
+        ('contact_date', 'Contact date'),
+        ('name', 'Name'),
+        ('subscriber_count', 'Subscribers'),
+        ('status', 'Status'),
+        ('signups', 'Signups'),
+        ('commission', 'Commission')
+      ] %}
+      {% for value, label in sort_options %}
+        <option value="{{ value }}" {{ 'selected' if filters.sort == value }}>Sort: {{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="direction">
+      <option value="desc" {{ 'selected' if filters.direction == 'desc' }}>Desc</option>
+      <option value="asc" {{ 'selected' if filters.direction == 'asc' }}>Asc</option>
+    </select>
+    <button type="submit">Apply</button>
+    <a class="btn-link" href="{{ url_for('index') }}">Reset</a>
+  </form>
+
+  <div class="io-actions">
+    <a class="btn" href="{{ url_for('export_xlsx') }}">Export .xlsx</a>
+    <form class="import-form" method="post" action="{{ url_for('import_xlsx') }}" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".xlsx">
+      <button type="submit">Import</button>
+    </form>
+  </div>
+</section>
+
+{% if records %}
+<table class="grid">
+  <thead>
+    <tr>
+      <th>Creator</th>
+      <th>Subs</th>
+      <th>Niche</th>
+      <th>Status</th>
+      <th>Affiliate Code</th>
+      <th>Signups</th>
+      <th>Rate</th>
+      <th>Commission</th>
+      <th>Contact</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in records %}
+    <tr>
+      <td>
+        <div class="creator-name">{{ r.name }}</div>
+        <div class="creator-meta">
+          {% if r.youtube_link %}<a href="{{ r.youtube_link }}" target="_blank" rel="noopener">YouTube</a>{% endif %}
+          {% if r.discord_link %}<a href="{{ r.discord_link }}" target="_blank" rel="noopener">Discord</a>{% endif %}
+          {% if r.discord_username %}<span>@{{ r.discord_username }}</span>{% endif %}
+        </div>
+      </td>
+      <td>{{ "{:,}".format(r.subscriber_count or 0) }}</td>
+      <td>{{ r.niche }}</td>
+      <td><span class="pill pill-{{ r.status|lower }}">{{ r.status }}</span></td>
+      <td><code>{{ r.affiliate_code }}</code></td>
+      <td>{{ r.signups }}</td>
+      <td>{{ cur }}{{ "%.2f"|format(r.effective_rate) }}</td>
+      <td class="num">{{ cur }}{{ "%.2f"|format(r.commission) }}</td>
+      <td>{{ r.contact_date }}</td>
+      <td class="row-actions">
+        <a href="{{ url_for('edit_creator', creator_id=r.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('remove_creator', creator_id=r.id) }}"
+              onsubmit="return confirm('Delete {{ r.name }}?');">
+          <button type="submit" class="link-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% if r.notes %}
+    <tr class="notes-row"><td colspan="10"><span class="notes-label">Notes:</span> {{ r.notes }}</td></tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">
+  No creators match. <a href="{{ url_for('new_creator') }}">Add your first creator</a> or import an .xlsx.
+</div>
+{% endif %}
+
+{% endblock %}

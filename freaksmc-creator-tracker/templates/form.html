@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if creator else 'Add' }} Creator · FreaksMC{% endblock %}
+{% block content %}
+
+<h1 class="page-title">{{ 'Edit Creator' if creator else 'Add Creator' }}</h1>
+
+<form class="record-form" method="post">
+  <div class="field-grid">
+    <label>Creator name *
+      <input type="text" name="name" required value="{{ creator.name if creator else '' }}">
+    </label>
+
+    <label>YouTube channel link
+      <input type="url" name="youtube_link" id="youtube_link"
+             value="{{ creator.youtube_link if creator else '' }}"
+             placeholder="https://youtube.com/@handle">
+    </label>
+
+    <label>Subscriber count
+      <input type="number" name="subscriber_count" min="0"
+             value="{{ creator.subscriber_count if creator else '' }}">
+    </label>
+
+    <label>Niche
+      <input type="text" name="niche" list="niche-options"
+             value="{{ creator.niche if creator else '' }}"
+             placeholder="Survival SMP, Skyblock, PvP…">
+      <datalist id="niche-options">
+        <option value="Survival SMP">
+        <option value="Skyblock">
+        <option value="PvP">
+        <option value="Minigames">
+        <option value="Modded">
+        <option value="Creative/Build">
+      </datalist>
+    </label>
+
+    <label>Discord server link
+      <input type="url" name="discord_link"
+             value="{{ creator.discord_link if creator else '' }}"
+             placeholder="https://discord.gg/…">
+    </label>
+
+    <label>Discord username
+      <input type="text" name="discord_username"
+             value="{{ creator.discord_username if creator else '' }}">
+    </label>
+
+    <label>Contact date
+      <input type="date" name="contact_date"
+             value="{{ creator.contact_date if creator else '' }}">
+    </label>
+
+    <label>Ticket status
+      <select name="status">
+        {% for status in statuses %}
+          <option value="{{ status }}"
+            {{ 'selected' if creator and creator.status == status else ('selected' if not creator and status == 'Sent') }}>
+            {{ status }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Affiliate code
+      <div class="code-row">
+        <input type="text" name="affiliate_code" id="affiliate_code"
+               value="{{ creator.affiliate_code if creator else '' }}"
+               placeholder="auto-generated if blank">
+        <button type="button" id="gen-code" class="btn-mini">Generate</button>
+      </div>
+      <small>Pattern: {{ settings.code_prefix }}HANDLE{{ settings.code_suffix }} (set in Settings)</small>
+    </label>
+
+    <label>Signups generated
+      <input type="number" name="signups" min="0"
+             value="{{ creator.signups if creator else '0' }}">
+    </label>
+
+    <label>Per-signup rate ({{ settings.currency }})
+      <input type="number" name="rate" step="0.01" min="0"
+             value="{{ creator.rate if creator and creator.rate is not none else '' }}"
+             placeholder="blank = default {{ settings.currency }}{{ '%.2f'|format(settings.default_rate) }}">
+      <small>Leave blank to use the global default rate.</small>
+    </label>
+  </div>
+
+  <label class="full">Notes
+    <textarea name="notes" rows="4">{{ creator.notes if creator else '' }}</textarea>
+  </label>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">{{ 'Save changes' if creator else 'Add creator' }}</button>
+    <a class="btn-link" href="{{ url_for('index') }}">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Live affiliate-code generation from the YouTube link (or name as fallback).
+  document.getElementById('gen-code').addEventListener('click', async function () {
+    const yt = document.getElementById('youtube_link').value;
+    const name = document.querySelector('input[name="name"]').value;
+    const handle = yt || name;
+    if (!handle) { return; }
+    const resp = await fetch('{{ url_for("generate_code") }}?handle=' + encodeURIComponent(handle));
+    const data = await resp.json();
+    if (data.code) { document.getElementById('affiliate_code').value = data.code; }
+  });
+</script>
+{% endblock %}

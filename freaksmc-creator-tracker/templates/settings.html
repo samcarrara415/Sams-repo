@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Settings · FreaksMC{% endblock %}
+{% block content %}
+
+<h1 class="page-title">Settings</h1>
+
+<form class="record-form" method="post">
+  <div class="field-grid">
+    <label>Default per-signup rate
+      <input type="number" name="default_rate" step="0.01" min="0"
+             value="{{ '%.2f'|format(settings.default_rate) }}">
+      <small>Used when a creator has no own rate. Commission = signups × rate.</small>
+    </label>
+
+    <label>Currency symbol
+      <input type="text" name="currency" maxlength="3" value="{{ settings.currency }}">
+    </label>
+
+    <label>Affiliate code prefix
+      <input type="text" name="code_prefix" value="{{ settings.code_prefix }}"
+             placeholder="(optional)">
+      <small>Goes before the handle, e.g. FREAKS.</small>
+    </label>
+
+    <label>Affiliate code suffix
+      <input type="text" name="code_suffix" value="{{ settings.code_suffix }}"
+             placeholder="(optional)">
+      <small>Goes after the handle, e.g. 10 for a 10% code.</small>
+    </label>
+  </div>
+
+  <p class="preview">Example code: <code>{{ settings.code_prefix }}STEVEBUILDS{{ settings.code_suffix }}</code></p>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">Save settings</button>
+    <a class="btn-link" href="{{ url_for('index') }}">Back</a>
+  </div>
+</form>
+
+{% endblock %}
