@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser');
 const oauth = require('./lib/oauth');
 const store = require('./lib/sessions');
 const anthropic = require('./lib/anthropic');
+const runner = require('./lib/runner');
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-insecure-secret-change-me';
@@ -126,27 +127,30 @@ app.post('/api/settings/model', (req, res) => {
 
 // --- Projects API ----------------------------------------------------------
 
-app.get('/api/projects', requireAuth, (req, res) => {
+// Note: the IDE (projects, editing, running) works without logging in — only
+// the AI chat endpoint requires authentication. This keeps the plain C++ /
+// web editor usable as a "normal IDE with a Run button".
+app.get('/api/projects', (req, res) => {
   const list = [...req.session.projects.values()]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .map(store.summarizeProject);
   res.json({ projects: list });
 });
 
-app.post('/api/projects', requireAuth, (req, res) => {
-  const { name } = req.body || {};
-  const project = store.createProject(req.session, { name });
+app.post('/api/projects', (req, res) => {
+  const { name, kind } = req.body || {};
+  const project = store.createProject(req.session, { name, kind });
   res.json({ project: fullProject(project) });
 });
 
-app.get('/api/projects/:id', requireAuth, (req, res) => {
+app.get('/api/projects/:id', (req, res) => {
   const project = req.session.projects.get(req.params.id);
   if (!project) return res.status(404).json({ error: 'Project not found.' });
   res.json({ project: fullProject(project) });
 });
 
 // Save a single file's contents (manual editor edits).
-app.put('/api/projects/:id/file', requireAuth, (req, res) => {
+app.put('/api/projects/:id/file', (req, res) => {
   const project = req.session.projects.get(req.params.id);
   if (!project) return res.status(404).json({ error: 'Project not found.' });
   const { path: filePath, content } = req.body || {};
@@ -158,7 +162,7 @@ app.put('/api/projects/:id/file', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/api/projects/:id/file', requireAuth, (req, res) => {
+app.delete('/api/projects/:id/file', (req, res) => {
   const project = req.session.projects.get(req.params.id);
   if (!project) return res.status(404).json({ error: 'Project not found.' });
   const { path: filePath } = req.body || {};
@@ -173,11 +177,26 @@ function fullProject(project) {
   return {
     id: project.id,
     name: project.name,
+    kind: project.kind || 'web',
     files: project.files,
     messages: project.messages,
     updatedAt: project.updatedAt,
   };
 }
+
+// --- Run C++ (real g++ compile + execute) ----------------------------------
+
+app.post('/api/projects/:id/run', async (req, res) => {
+  const project = req.session.projects.get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found.' });
+  const stdin = req.body && typeof req.body.stdin === 'string' ? req.body.stdin : '';
+  try {
+    const result = await runner.compileAndRunCpp(project.files, stdin);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, stage: 'run', stderr: err.message || 'Run failed.' });
+  }
+});
 
 // --- AI chat (Server-Sent Events) -----------------------------------------
 
@@ -255,8 +274,8 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
-app.get('/preview/:id/*', requireAuth, (req, res) => {
-  const project = req.session.projects.get(req.params.id);
+app.get('/preview/:id/*', (req, res) => {
+  const project = store.getProjectById(req.params.id);
   if (!project) return res.status(404).send('Project not found');
   let filePath = req.params[0] || 'index.html';
   if (filePath === '' || filePath.endsWith('/')) filePath += 'index.html';
@@ -267,7 +286,7 @@ app.get('/preview/:id/*', requireAuth, (req, res) => {
   res.send(content);
 });
 // Bare /preview/:id → index.html
-app.get('/preview/:id', requireAuth, (req, res) => res.redirect(`/preview/${req.params.id}/index.html`));
+app.get('/preview/:id', (req, res) => res.redirect(`/preview/${req.params.id}/index.html`));
 
 // --- Static frontend -------------------------------------------------------
 

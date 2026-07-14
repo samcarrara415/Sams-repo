@@ -43,15 +43,40 @@ Output format — respond with a short plain-text explanation (1-3 sentences) of
 
 Do not put anything after the last </file> tag. Do not use markdown code fences around the file blocks.`;
 
-function buildSystem(mode) {
+const CPP_BUILDER_INSTRUCTIONS = `You are the code-generation engine for Claude Studio, an in-browser C++ IDE with a real g++ toolchain and a Run button.
+
+Your job: given a user request and the current project files, produce a complete, compiling C++ program.
+
+Rules:
+- Output standard C++ (compiled with g++ -std=c++20). Use only the C++ standard library — no third-party packages, no build system.
+- The program's entry point (int main()) MUST live in a file named "main.cpp".
+- You may add extra .cpp/.hpp files and #include them by relative name; all .cpp files are compiled together.
+- If the program needs input, read it from standard input (std::cin) — the user provides stdin in the console.
+- Always output the FULL, FINAL content of every file you create or change — never diffs or "// unchanged" placeholders.
+- Only include files that changed or are new.
+
+Output format — respond with a short plain-text explanation (1-3 sentences) of what you built or changed, then each file wrapped exactly like this:
+
+<file path="main.cpp">
+...full file contents...
+</file>
+
+Do not put anything after the last </file> tag. Do not use markdown code fences around the file blocks.`;
+
+function instructionsFor(kind) {
+  return kind === 'cpp' ? CPP_BUILDER_INSTRUCTIONS : BUILDER_INSTRUCTIONS;
+}
+
+function buildSystem(mode, kind) {
+  const builder = instructionsFor(kind);
   if (mode === 'oauth') {
     // First block MUST be the Claude Code identity for subscription inference.
     return [
       { type: 'text', text: CLAUDE_CODE_IDENTITY },
-      { type: 'text', text: BUILDER_INSTRUCTIONS },
+      { type: 'text', text: builder },
     ];
   }
-  return [{ type: 'text', text: BUILDER_INSTRUCTIONS }];
+  return [{ type: 'text', text: builder }];
 }
 
 function buildHeaders(auth) {
@@ -89,7 +114,7 @@ async function streamMessage({ auth, model, project, message, history, onText })
     body: JSON.stringify({
       model,
       max_tokens: 16000,
-      system: buildSystem(auth.mode),
+      system: buildSystem(auth.mode, project.kind),
       messages,
       stream: true,
     }),

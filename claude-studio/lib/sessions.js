@@ -10,6 +10,7 @@ const crypto = require('crypto');
 
 const sessions = new Map(); // sid -> session
 const pkceFlows = new Map(); // state -> { verifier, createdAt }
+const allProjects = new Map(); // projectId -> project (for cookie-less preview lookups)
 
 const PKCE_TTL_MS = 15 * 60 * 1000;
 
@@ -65,18 +66,47 @@ function prunePkce() {
 
 // --- Projects --------------------------------------------------------------
 
-function createProject(session, { name, files } = {}) {
+function createProject(session, { name, files, kind } = {}) {
   const id = newId();
+  const projectKind = kind === 'cpp' ? 'cpp' : 'web';
   const project = {
     id,
-    name: name || 'Untitled App',
+    name: name || (projectKind === 'cpp' ? 'Untitled C++' : 'Untitled App'),
+    kind: projectKind,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    files: files || defaultFiles(),
+    files: files || (projectKind === 'cpp' ? defaultCppFiles() : defaultFiles()),
     messages: [], // { role, content } chat history for the AI
   };
   session.projects.set(id, project);
+  allProjects.set(id, project);
   return project;
+}
+
+// Look up a project by id regardless of session. Preview subresources load
+// from a sandboxed (opaque-origin) iframe that sends no session cookie, so
+// preview relies on the unguessable random project id instead.
+function getProjectById(id) {
+  return allProjects.get(id);
+}
+
+function defaultCppFiles() {
+  return {
+    'main.cpp': `#include <iostream>
+#include <string>
+
+int main() {
+    std::cout << "Hello from C++!\\n";
+
+    // Try me: this reads a name from stdin.
+    // std::string name;
+    // std::getline(std::cin, name);
+    // std::cout << "Hi, " << name << "!\\n";
+
+    return 0;
+}
+`,
+  };
 }
 
 function defaultFiles() {
@@ -117,6 +147,7 @@ function summarizeProject(project) {
   return {
     id: project.id,
     name: project.name,
+    kind: project.kind || 'web',
     updatedAt: project.updatedAt,
     files: Object.keys(project.files),
   };
@@ -129,6 +160,7 @@ module.exports = {
   stashPkce,
   takePkce,
   createProject,
+  getProjectById,
   summarizeProject,
   defaultFiles,
 };

@@ -16,11 +16,20 @@ as a fallback.)
   uses). Subscription-backed inference via the `user:inference` scope. Tokens are
   refreshed automatically; nothing is billed to a central API key.
 - **AI app creation** — chat a prompt, Claude scaffolds a complete multi-file
-  static web app. Follow-up prompts edit the existing project with full file
-  context. Streaming responses.
-- **IDE** — projects list, file tree, Monaco code editor with tabs, autosave.
-- **Live preview** — each project is served under `/preview/:id/*` and rendered in
-  a sandboxed iframe that refreshes as files change.
+  project. Follow-up prompts edit the existing project with full file context.
+  Streaming responses.
+- **Two project types**
+  - **Web app** — HTML/CSS/JS rendered live in a sandboxed preview iframe.
+  - **C++ program** — a real IDE with a **Run button**: the server compiles your
+    sources with `g++ -std=c++20` and runs the binary, with a stdin box and a
+    console for stdout/stderr, compiler errors, exit codes, and a run timeout.
+    (This is the "plain C++ IDE with a Run button" that Replit removed.)
+- **IDE** — projects list, file tree, code editor (Monaco, with a plain-textarea
+  fallback if the editor CDN is unavailable), tabs, autosave.
+- **Works on mobile** — responsive layout that collapses to a bottom tab bar
+  (Files · Code · Run/Preview · Chat) on phones and tablets.
+- **No-login editing** — the editor and the C++ Run button work without signing
+  in; a Claude login is only needed for the AI generation features.
 
 ## Quick start
 
@@ -53,12 +62,26 @@ parameters are overridable via environment variables — see `.env.example`.
 ## Architecture
 
 ```
-server.js            Express app: auth, projects, AI chat (SSE), live preview
+server.js            Express app: auth, projects, AI chat (SSE), C++ run, preview
 lib/oauth.js         Claude "Login with Claude" PKCE flow + token refresh
 lib/anthropic.js     Messages API client (oauth + api-key), file-block parsing
+lib/runner.js        Real g++ compile-and-run with timeouts and output caps
 lib/sessions.js      In-memory session / PKCE / project stores
-public/              IDE front-end (Monaco via CDN, no build step)
+public/              IDE front-end (Monaco via CDN + textarea fallback, no build)
 ```
+
+### The C++ Run button
+
+Requires `g++` on the host (`sudo apt-get install g++` / part of `build-essential`).
+When you press **Run**, `lib/runner.js` writes the project's `.cpp`/header files to a
+temp directory, compiles them together, then executes the binary — feeding your
+stdin box to the program. Compilation is capped at 15s, execution at 8s, and each
+output stream at 256 KB, so runaway programs are killed cleanly.
+
+> Server-side execution note: the runner compiles and runs untrusted code on the
+> host with time/output limits but **no OS-level sandbox**. Run it locally or in a
+> disposable container; don't expose this endpoint on a shared/production host
+> without adding real isolation (containers, seccomp, resource cgroups).
 
 Sessions and projects are held in memory, keyed by a signed cookie — swap the Maps
 in `lib/sessions.js` for a database to persist projects or run multiple instances.
