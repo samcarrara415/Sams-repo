@@ -163,7 +163,8 @@ function boot() {
     createProject('web');
   }
   renderProjectList();
-  if (!state.apiKey) openLogin();
+  // No API key needed to just code: open straight into the IDE. The AI chat is
+  // optional and only prompts for a key if/when it's actually used.
 }
 
 // ---------------------------------------------------------------------------
