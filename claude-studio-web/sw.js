@@ -11,7 +11,7 @@
 // Bump CACHE_VERSION whenever the shell changes to evict old caches.
 // ---------------------------------------------------------------------------
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE = 'claude-studio-web-' + CACHE_VERSION;
 
 const SHELL = [
