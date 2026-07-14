@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>Claude Studio — AI web &amp; C++ IDE</title>
+  <meta name="description" content="Build web apps and run C++ in your browser, with AI powered by your Anthropic API key. Installable, fully static." />
+
+  <!-- PWA / installable app (relative paths — works under a GitHub Pages subpath) -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="theme-color" content="#161b22" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Claude Studio" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="kind-web">
+
+  <!-- ===================== Connect (API key) overlay ===================== -->
+  <div id="login" class="overlay hidden">
+    <div class="login-card">
+      <button id="login-close" class="login-close" title="Continue without a key">✕</button>
+      <div class="brand-big">◆ Claude Studio</div>
+      <p class="login-sub">Build web apps &amp; run C++ in your browser. AI is powered by <b>your Anthropic API key</b>, stored only on this device and sent straight to Anthropic.</p>
+
+      <input id="api-key" class="input" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      <button id="btn-apikey" class="btn btn-primary btn-block">Save key &amp; start building</button>
+      <p class="hint">
+        Get a key at <b>console.anthropic.com → API Keys</b>. It never leaves your browser except in requests to Anthropic.
+        <br/><br/>
+        Want to use your <b>Claude subscription</b> (no API key) or a real <b>g++</b> compiler? That needs the
+        server edition (<code>claude-studio/</code>) — browsers can't do the subscription login on a static site.
+      </p>
+      <div id="login-error" class="error hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===================== App shell ===================== -->
+  <div id="app" class="hidden">
+    <header class="topbar">
+      <button id="btn-menu" class="btn btn-ghost btn-sm menu-only" title="Files">☰</button>
+      <div class="brand">◆ Claude Studio</div>
+      <div class="project-name" id="project-name">—</div>
+      <div class="spacer"></div>
+      <select id="model-select" class="model-select" title="Model"></select>
+      <span id="auth-badge" class="badge hidden"></span>
+      <button id="btn-login" class="btn btn-primary btn-sm hidden">Add API key</button>
+      <button id="btn-logout" class="btn btn-ghost btn-sm hidden">Remove key</button>
+    </header>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="side-section">
+          <div class="side-head">
+            <span>Projects</span>
+            <div class="new-wrap">
+              <button id="btn-new-project" class="btn btn-sm" title="New project">+</button>
+              <div id="new-menu" class="new-menu hidden">
+                <button data-kind="web">🌐 Web app</button>
+                <button data-kind="cpp">🔧 C++ program</button>
+              </div>
+            </div>
+          </div>
+          <ul id="project-list" class="list"></ul>
+        </div>
+        <div class="side-section grow">
+          <div class="side-head">
+            <span>Files</span>
+            <button id="btn-new-file" class="btn btn-sm" title="New file">+</button>
+          </div>
+          <ul id="file-list" class="list"></ul>
+        </div>
+      </aside>
+
+      <!-- Editor -->
+      <main class="editor-col">
+        <div class="tabbar" id="tabbar"></div>
+        <div id="editor" class="editor"></div>
+      </main>
+
+      <!-- Preview / console + chat -->
+      <section class="right-col">
+        <div class="preview-wrap" id="web-preview">
+          <div class="panel-head">
+            <span>Preview</span>
+            <div class="spacer"></div>
+            <button id="btn-refresh" class="btn btn-sm" title="Reload">⟳</button>
+          </div>
+          <iframe id="preview" class="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+        </div>
+
+        <div class="preview-wrap" id="cpp-console">
+          <div class="panel-head">
+            <span>Console</span>
+            <div class="spacer"></div>
+            <button id="btn-clear-console" class="btn btn-sm" title="Clear">Clear</button>
+            <button id="btn-run" class="btn btn-primary btn-sm" title="Run (Ctrl/Cmd+Enter)">▶ Run</button>
+          </div>
+          <pre id="cpp-output" class="console-out"><span class="console-dim">Press ▶ Run to compile &amp; execute in your browser (JSCPP).</span></pre>
+          <div class="stdin-row">
+            <input id="cpp-stdin" class="stdin-input" placeholder="Program input (stdin) — one line per prompt" />
+          </div>
+        </div>
+
+        <div class="chat-wrap">
+          <div class="panel-head"><span>Build with Claude</span></div>
+          <div id="chat" class="chat"></div>
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" class="chat-input" rows="2"
+              placeholder="Describe an app to build, or an edit to make…"></textarea>
+            <button id="chat-send" class="btn btn-primary" type="submit">Send</button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <nav class="mobile-nav">
+      <button data-mview="files"><span>📁</span>Files</button>
+      <button data-mview="code" class="active"><span>〈〉</span>Code</button>
+      <button data-mview="preview" id="mnav-run"><span>▶</span><span id="mnav-run-label">Preview</span></button>
+      <button data-mview="chat"><span>💬</span>Chat</button>
+    </nav>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
+  <script src="./vendor/JSCPP.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
