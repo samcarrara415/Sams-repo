@@ -88,8 +88,12 @@ body {
 
 /* ---------- top bar ---------- */
 .topbar {
-  height: 48px; display: flex; align-items: center; gap: 14px;
-  padding: 0 16px; background: var(--bg2); border-bottom: 1px solid var(--border);
+  height: calc(48px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
 }
 .brand { font-weight: 800; color: var(--accent); }
 .project-name { color: var(--muted); font-size: 0.9rem; }
@@ -103,7 +107,7 @@ body {
 }
 
 /* ---------- layout ---------- */
-.layout { height: calc(100vh - 48px); display: grid; grid-template-columns: 220px 1fr 420px; }
+.layout { height: calc(100vh - 48px - env(safe-area-inset-top)); display: grid; grid-template-columns: 220px 1fr 420px; }
 
 .sidebar { background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 .side-section { padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
@@ -205,7 +209,8 @@ body {
 .mobile-nav { display: none; }
 
 @media (max-width: 820px) {
-  .topbar { gap: 8px; padding: 0 10px; }
+  /* keep the top safe-area padding from the base rule; only tweak the sides */
+  .topbar { gap: 8px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
   .brand { font-size: 0.95rem; }
   .project-name { display: none; }
   .model-select { max-width: 130px; }
@@ -213,7 +218,7 @@ body {
 
   .layout {
     display: block;
-    height: calc(100dvh - 48px - 54px);
+    height: calc(100dvh - 48px - 54px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     position: relative;
   }
   .sidebar, .editor-col, .right-col { position: absolute; inset: 0; display: none; }
