@@ -548,8 +548,16 @@ async function consumeSSE(body, onEvent) {
   }
 }
 
-// Register service worker for installability.
+// Register service worker for installability, and auto-reload once when a new
+// version takes control so deploys show up without a manual hard-refresh.
 if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing || !hadController) return; // don't reload on first-ever install
+    refreshing = true;
+    window.location.reload();
+  });
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
