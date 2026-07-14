@@ -1,0 +1,14 @@
+{
+  "name": "claude-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Replit-style AI app builder that logs in with your Claude subscription to power the AI features.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.0"
+  }
+}
