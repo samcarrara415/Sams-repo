@@ -17,29 +17,21 @@ Your code is saved in the browser automatically. **Reset** restores the starter.
 
 ## How it runs
 
-Code executes locally via [JSCPP](https://github.com/felixhao28/JSCPP), a C++
-interpreter compiled to run in the browser (vendored in `vendor/`, so it works
-offline). It supports a **subset** of C++:
+Run compiles and executes your code on a **real gcc 13.2 compiler** via the
+[Wandbox](https://wandbox.org) API (called directly from the browser — it's
+CORS-enabled). That means the **full C++ standard library** works: `std::string`,
+`std::vector`, `<algorithm>`, ranges, everything. Pick the language standard
+(C++17 / C++20 / C++23) from the header.
 
-- Common headers: `<iostream>`, `<cmath>`, `<cstdio>`, `<cstdlib>`, `<cstring>`,
-  `<ctime>`, `<cctype>`, `<iomanip>`.
-- Core language: variables, control flow, functions, recursion, arrays,
-  pointers, structs, math, and console I/O.
-- **No STL containers or `std::string`** (no `<vector>`/`<string>`/`<algorithm>`);
-  use C arrays and `char[]` strings.
-- You can write either `std::cout` or `using namespace std;` — the playground
-  normalizes `std::` automatically so both styles just run.
-
-For full-language C++ (`std::vector`, modern STL, real `g++`), use a real
-toolchain; this is a lightweight learn-and-experiment environment.
+Because compilation runs online, **Run needs an internet connection** (the app
+shell itself still loads offline as an installed PWA).
 
 ## Files
 
 ```
-index.html   editor + Run button + terminal
-app.js       editor (Monaco, textarea fallback) + JSCPP runner
-styles.css   dark, mobile/safe-area-aware layout
-vendor/      bundled JSCPP interpreter (MIT) + its license
+index.html   editor + Run + C++ standard picker + terminal
+app.js       editor (Monaco, textarea fallback) + Wandbox (gcc) runner
+styles.css   dark, mobile/safe-area-aware, Replit-style layout
 sw.js        service worker (offline shell, network-first code)
 manifest.webmanifest, icon*  PWA install metadata
 ```

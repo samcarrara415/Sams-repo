@@ -2,22 +2,35 @@
 
 // ===========================================================================
 // C++ Playground — write C++, hit Run, see output in the terminal.
-// Runs entirely in the browser via JSCPP (a C++ interpreter). No server,
-// no account, works offline once loaded.
+// Compiles & runs on a REAL gcc compiler via the Wandbox API (browser-direct,
+// CORS-enabled). Full C++ standard library; no local interpreter.
 // ===========================================================================
 
 const $ = (s) => document.querySelector(s);
 const LS_CODE = 'cpp_playground_code';
+const LS_STD = 'cpp_playground_std';
+
+const WANDBOX_URL = 'https://wandbox.org/api/compile.json';
+const COMPILER = 'gcc-13.2.0';
+const STD_LABELS = { 'c++17': 'C++17', 'c++2a': 'C++20', 'gnu++2b': 'C++23' };
 
 const STARTER = `#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
 
 int main() {
-    std::cout << "Hello, Sam!" << std::endl;
+    cout << "Hello, Sam!" << endl;
 
-    // Read input from the stdin box, then run:
+    // Full C++ standard library works here.
+    vector<string> langs = {"C", "C++", "Rust"};
+    for (const string& s : langs) cout << s << " ";
+    cout << endl;
+
+    // Read from the stdin box:
     // int n;
-    // std::cin >> n;
-    // std::cout << "n * 2 = " << (n * 2) << std::endl;
+    // cin >> n;
+    // cout << "n * 2 = " << n * 2 << endl;
 
     return 0;
 }
@@ -27,20 +40,7 @@ const state = { editor: null, ready: false, isMonaco: false, running: false, sav
 
 const escapeHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-// JSCPP supports a C++ subset: it needs "using namespace std;" and rejects the
-// "std::" prefix. Make normal C++ "just work" by stripping std:: and ensuring
-// the using-directive is present before running.
-function prepareForJscpp(src) {
-  let s = src.replace(/\bstd::/g, '');
-  if (!/using\s+namespace\s+std\s*;/.test(s)) {
-    const lines = s.split('\n');
-    let lastInclude = -1;
-    for (let i = 0; i < lines.length; i++) if (/^\s*#\s*include/.test(lines[i])) lastInclude = i;
-    lines.splice(lastInclude + 1, 0, 'using namespace std;');
-    s = lines.join('\n');
-  }
-  return s;
-}
+function currentStd() { return $('#std').value; }
 
 // ---------------------------------------------------------------------------
 // Editor (Monaco with a textarea fallback)
@@ -48,14 +48,9 @@ function prepareForJscpp(src) {
 function initEditor(initialValue) {
   const finishMonaco = () => {
     const ed = monaco.editor.create($('#editor'), {
-      value: initialValue,
-      language: 'cpp',
-      theme: 'vs-dark',
-      automaticLayout: true,
-      minimap: { enabled: false },
-      fontSize: 14,
-      scrollBeyondLastLine: false,
-      tabSize: 4,
+      value: initialValue, language: 'cpp', theme: 'vs-dark', automaticLayout: true,
+      minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, tabSize: 4,
+      padding: { top: 12 }, smoothScrolling: true, cursorBlinking: 'smooth',
     });
     ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, run);
     ed.onDidChangeModelContent(scheduleSave);
@@ -78,7 +73,6 @@ function initFallback(initialValue) {
   ta.addEventListener('input', scheduleSave);
   ta.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
-    // basic tab support
     if (e.key === 'Tab') {
       e.preventDefault();
       const s = ta.selectionStart, en = ta.selectionEnd;
@@ -92,58 +86,103 @@ function initFallback(initialValue) {
 
 function scheduleSave() {
   clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(() => {
-    try { localStorage.setItem(LS_CODE, state.editor.getValue()); } catch {}
-  }, 400);
+  state.saveTimer = setTimeout(() => { try { localStorage.setItem(LS_CODE, state.editor.getValue()); } catch {} }, 400);
 }
 
 // ---------------------------------------------------------------------------
-// Run
+// Run (Wandbox: real gcc)
 // ---------------------------------------------------------------------------
-function runJscpp(code, stdin) {
-  if (typeof JSCPP === 'undefined') return { error: 'C++ runtime failed to load. Try reloading the page.' };
-  let out = '';
-  const config = { stdio: { write: (s) => { out += s; } }, unsigned_overflow: 'warn', maxTimeout: 5000, maxExecutionSteps: 5_000_000 };
+function setStatus(kind, text) {
+  const dot = $('#status-dot');
+  dot.className = 'status-dot' + (kind ? ' ' + kind : '');
+  $('#term-status').textContent = text;
+}
+
+async function run() {
+  if (!state.ready || state.running) return;
+  state.running = true;
+  const btn = $('#btn-run'); btn.classList.add('busy');
+  const out = $('#output');
+  const std = currentStd();
+
+  setStatus('running', 'Compiling…');
+  out.innerHTML = `<span class="dim">Compiling &amp; running on gcc 13.2 (${STD_LABELS[std] || std})…</span>`;
+
+  const started = performance.now ? performance.now() : 0;
   try {
-    const exitCode = JSCPP.run(prepareForJscpp(code), stdin || '', config);
-    return { output: out, exitCode };
-  } catch (e) {
-    return { output: out, error: String((e && e.message) || e) };
+    const res = await fetch(WANDBOX_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: state.editor.getValue(),
+        compiler: COMPILER,
+        stdin: $('#stdin').value || '',
+        options: 'warning,' + std,
+        'compiler-option-raw': '',
+        'runtime-option-raw': '',
+      }),
+    });
+    if (!res.ok) throw new Error('Compiler service returned ' + res.status);
+    const data = await res.json();
+    renderResult(data, started);
+  } catch (err) {
+    const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+    out.innerHTML = `<span class="err">${escapeHtml(
+      offline ? 'You appear to be offline. The compiler runs online — reconnect and try again.'
+              : 'Could not reach the compiler: ' + err.message
+    )}</span><span class="meta bad">✗ could not run</span>`;
+    setStatus('err', 'Connection error');
+  } finally {
+    state.running = false; btn.classList.remove('busy');
   }
 }
 
-function run() {
-  if (!state.ready || state.running) return;
-  state.running = true;
-  const btn = $('#btn-run'); btn.disabled = true;
+function renderResult(data, started) {
   const out = $('#output');
-  out.innerHTML = '<span class="dim">Running…</span>';
+  const diag = (data.compiler_error || '').trim();      // gcc warnings + errors
+  const stdout = data.program_output || '';
+  const stderr = (data.program_error || '').trim();     // runtime stderr
+  const compileFailed = /error:/i.test(diag) && !stdout && !data.program_message;
+  const ms = started ? Math.round((performance.now() - started)) : 0;
 
-  // let the "Running…" paint before the (synchronous) interpreter blocks
-  setTimeout(() => {
-    const res = runJscpp(state.editor.getValue(), $('#stdin').value);
-    let html = '';
-    if (res.output) html += escapeHtml(res.output);
-    if (res.error) html += `${res.output ? '\n' : ''}<span class="err">${escapeHtml(res.error)}</span>`;
-    if (!res.output && !res.error) html += '<span class="dim">(no output)</span>';
-    const ok = !res.error;
-    html += `<span class="meta ${ok ? 'ok' : 'bad'}">${ok ? '✓ finished — exit code ' + (res.exitCode ?? 0) : '✗ error'}</span>`;
-    out.innerHTML = html;
-    out.scrollTop = out.scrollHeight;
-    state.running = false; btn.disabled = false;
-  }, 20);
+  let html = '';
+  if (diag) html += `<span class="warn">${escapeHtml(diag)}</span>\n`;
+  if (stdout) html += escapeHtml(stdout);
+  if (stderr) html += `${stdout ? '\n' : ''}<span class="err">${escapeHtml(stderr)}</span>`;
+  if (!diag && !stdout && !stderr) html += '<span class="dim">(no output)</span>';
+
+  if (compileFailed) {
+    html += `<span class="meta bad">✗ Compilation failed</span>`;
+    setStatus('err', 'Compile error');
+  } else {
+    const code = data.status != null ? data.status : '0';
+    const ok = String(code) === '0';
+    html += `<span class="meta ${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} finished · exit ${code}${ms ? ' · ' + ms + ' ms' : ''}</span>`;
+    setStatus(ok ? 'ok' : 'err', ok ? 'Finished' : 'Runtime error');
+  }
+  out.innerHTML = html;
+  out.scrollTop = out.scrollHeight;
 }
 
 // ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
+function updateEnvLabel() { $('#term-env').textContent = 'gcc 13.2 · ' + (STD_LABELS[currentStd()] || currentStd()); }
+
 function boot() {
-  let saved = STARTER;
+  let saved = STARTER, savedStd = 'c++2a';
   try { saved = localStorage.getItem(LS_CODE) || STARTER; } catch {}
+  try { savedStd = localStorage.getItem(LS_STD) || 'c++2a'; } catch {}
+  if (STD_LABELS[savedStd]) $('#std').value = savedStd;
+  updateEnvLabel();
   initEditor(saved);
 
   $('#btn-run').onclick = run;
-  $('#btn-clear').onclick = () => { $('#output').innerHTML = '<span class="dim">Press ▶ Run to compile &amp; run. Output appears here.</span>'; };
+  $('#std').onchange = () => { updateEnvLabel(); try { localStorage.setItem(LS_STD, currentStd()); } catch {} };
+  $('#btn-clear').onclick = () => {
+    $('#output').innerHTML = '<span class="dim">Press <b>▶ Run</b> to compile &amp; run on a real gcc compiler. Output appears here.</span>';
+    setStatus('', 'Ready');
+  };
   $('#btn-reset').onclick = () => {
     if (state.ready) { state.editor.setValue(STARTER); scheduleSave(); }
     if (state.isMonaco) setTimeout(() => state.editor.layout(), 0);

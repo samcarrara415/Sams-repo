@@ -11,12 +11,12 @@
 // Bump CACHE_VERSION whenever the shell changes to evict old caches.
 // ---------------------------------------------------------------------------
 
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE = 'claude-studio-web-' + CACHE_VERSION;
 
 const SHELL = [
   './', './index.html', './styles.css', './app.js',
-  './vendor/JSCPP.min.js', './manifest.webmanifest',
+  './manifest.webmanifest',
   './icon.svg', './icon-192.png', './icon-512.png', './icon-180.png',
 ];
 

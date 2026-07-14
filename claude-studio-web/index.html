@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>C++ Playground</title>
-  <meta name="description" content="Write C++ and run it in your browser — output prints to the terminal. No setup, works offline, installable." />
+  <meta name="description" content="Write C++ and run it on a real gcc compiler from your browser. Output prints to the terminal. Installable." />
 
   <!-- PWA / installable -->
   <link rel="manifest" href="./manifest.webmanifest" />
@@ -22,10 +22,19 @@
 <body>
 
   <header class="topbar">
-    <div class="brand">◆ C++ Playground</div>
+    <div class="brand"><span class="brand-mark">◆</span> C++ Playground</div>
     <div class="spacer"></div>
-    <button id="btn-reset" class="btn btn-ghost" title="Reset to the starter program">Reset</button>
-    <button id="btn-run" class="btn btn-run" title="Run (Ctrl/Cmd + Enter)">▶ Run</button>
+    <label class="std-select">
+      <select id="std" title="C++ standard">
+        <option value="c++17">C++17</option>
+        <option value="c++2a" selected>C++20</option>
+        <option value="gnu++2b">C++23</option>
+      </select>
+    </label>
+    <button id="btn-run" class="btn btn-run" title="Run (Ctrl/Cmd + Enter)">
+      <span class="run-icon">▶</span><span class="run-label">Run</span>
+      <span class="spinner" aria-hidden="true"></span>
+    </button>
   </header>
 
   <main class="workspace">
@@ -33,13 +42,18 @@
       <div id="editor" class="editor"></div>
     </section>
 
+    <div class="divider" role="separator"></div>
+
     <section class="terminal-pane">
       <div class="term-head">
-        <span>Terminal</span>
+        <span class="status-dot" id="status-dot"></span>
+        <span class="term-title" id="term-status">Ready</span>
         <div class="spacer"></div>
+        <span class="term-env" id="term-env">gcc 13.2 · C++20</span>
+        <button id="btn-reset" class="btn btn-ghost btn-sm">Reset</button>
         <button id="btn-clear" class="btn btn-ghost btn-sm">Clear</button>
       </div>
-      <pre id="output" class="term-out"><span class="dim">Press ▶ Run to compile &amp; run. Output appears here.</span></pre>
+      <pre id="output" class="term-out"><span class="dim">Press <b>▶ Run</b> to compile &amp; run on a real gcc compiler. Output appears here.</span></pre>
       <div class="stdin-row">
         <span class="stdin-label">stdin</span>
         <input id="stdin" class="stdin-input" placeholder="input for cin (optional)" autocomplete="off" spellcheck="false" />
@@ -48,7 +62,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
-  <script src="./vendor/JSCPP.min.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
