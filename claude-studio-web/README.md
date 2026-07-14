@@ -1,60 +1,45 @@
-# ◆ Claude Studio — static edition (GitHub Pages)
+# ◆ C++ Playground
 
-A **fully client-side** build of Claude Studio that runs on static hosting like
-GitHub Pages. Build web apps by chatting with AI and run C++ right in the
-browser — no server, no build step. Installable to your home screen (PWA).
+A dead-simple, **fully in-browser C++ playground**: write C++, hit **▶ Run**, and
+the output prints to the terminal. No server, no account, no setup — and it
+installs to your home screen as an app.
 
-**Live (once Pages is enabled):**
-`https://samcarrara415.github.io/Sams-repo/claude-studio-web/`
+**Live:** `https://samcarrara415.github.io/Sams-repo/claude-studio-web/`
 
-## What it does
+## Use it
 
-- **AI app builder** — describe an app; Claude writes complete multi-file HTML/CSS/JS
-  that renders live in a sandboxed preview. Streaming responses.
-- **C++ IDE with a Run button** — write C++ and run it in-browser via
-  [JSCPP](https://github.com/felixhao28/JSCPP), with a stdin box and console.
-- **Editor** — Monaco (with a textarea fallback if the CDN is blocked), file tree,
-  tabs. Projects are saved in your browser's `localStorage`.
-- **Installable** — Add to Home Screen and it launches standalone like an app.
+1. Open the page (or install it: **Add to Home Screen**).
+2. Type C++ in the editor.
+3. Press **▶ Run** (or `Ctrl`/`Cmd` + `Enter`). Output shows in the terminal.
+4. Need input? Type it in the **stdin** box before running; read it with `cin`.
 
-## How the AI is authenticated (important)
+Your code is saved in the browser automatically. **Reset** restores the starter.
 
-This static edition uses **your own Anthropic API key**, entered once and stored
-only in your browser (`localStorage`). Requests go directly from your browser to
-`api.anthropic.com` using the `anthropic-dangerous-direct-browser-access` header,
-which Anthropic allows via CORS. Get a key at **console.anthropic.com → API Keys**.
+## How it runs
 
-> **Why not "Log in with Claude" (subscription)?** That OAuth flow's token
-> exchange has no CORS access, so it cannot run in a browser — it needs a server.
-> If you want subscription-based login and/or a **real g++** compiler, use the
-> **server edition** in [`../claude-studio`](../claude-studio) instead.
+Code executes locally via [JSCPP](https://github.com/felixhao28/JSCPP), a C++
+interpreter compiled to run in the browser (vendored in `vendor/`, so it works
+offline). It supports a **subset** of C++:
 
-## Static vs server edition
+- Common headers: `<iostream>`, `<cmath>`, `<cstdio>`, `<cstdlib>`, `<cstring>`,
+  `<ctime>`, `<cctype>`, `<iomanip>`.
+- Core language: variables, control flow, functions, recursion, arrays,
+  pointers, structs, math, and console I/O.
+- **No STL containers or `std::string`** (no `<vector>`/`<string>`/`<algorithm>`);
+  use C arrays and `char[]` strings.
+- You can write either `std::cout` or `using namespace std;` — the playground
+  normalizes `std::` automatically so both styles just run.
 
-| | Static (this) | Server (`../claude-studio`) |
-|---|---|---|
-| Hosting | ✅ GitHub Pages | Node host |
-| AI auth | Your API key | Claude **subscription** login or API key |
-| C++ | In-browser (JSCPP, a C++ subset) | Real **g++** |
-| Projects | Browser `localStorage` | Server memory |
-| Install (PWA) | ✅ from the Pages URL | ✅ once behind HTTPS |
+For full-language C++ (`std::vector`, modern STL, real `g++`), use a real
+toolchain; this is a lightweight learn-and-experiment environment.
 
-## Enabling GitHub Pages
+## Files
 
-Repo **Settings → Pages → Build and deployment → Source: Deploy from a branch**,
-branch `main`, folder `/ (root)`. Your existing project folders (this one included)
-are then served at `https://<user>.github.io/<repo>/<folder>/`.
-
-## Notes / limits
-
-- **C++ dialect (JSCPP):** the in-browser interpreter runs a *subset* of C++, not a
-  full compiler. In practice that means:
-  - Write `using namespace std;` and **avoid the `std::` prefix** (use `cout`, not `std::cout`).
-  - Available headers: `<iostream>`, `<cmath>`, `<cstdio>`, `<cstdlib>`, `<cstring>`,
-    `<ctime>`, `<cctype>`, `<iomanip>`.
-  - **No STL containers or `std::string`** — use C arrays and `char[]` strings.
-  - Great for learning, algorithms, math, and console programs. The AI is instructed
-    to generate code within these limits. For full-language C++ (`std::vector`,
-    `std::string`, modern STL), use the **server edition's real g++**.
-- Your API key lives in this browser only. Use "Remove key" to clear it. Anyone
-  with access to this device/profile can use the stored key — treat it like a password.
+```
+index.html   editor + Run button + terminal
+app.js       editor (Monaco, textarea fallback) + JSCPP runner
+styles.css   dark, mobile/safe-area-aware layout
+vendor/      bundled JSCPP interpreter (MIT) + its license
+sw.js        service worker (offline shell, network-first code)
+manifest.webmanifest, icon*  PWA install metadata
+```
