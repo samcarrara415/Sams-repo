@@ -578,4 +578,11 @@ async function consumeSSE(body, onEvent) {
   }
 }
 
+// Register the service worker so the app is installable to the home screen.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* non-fatal */ });
+  });
+}
+
 boot().catch((e) => { console.error(e); loginError(e.message); openLogin(); });

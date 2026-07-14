@@ -30,6 +30,10 @@ as a fallback.)
   (Files · Code · Run/Preview · Chat) on phones and tablets.
 - **No-login editing** — the editor and the C++ Run button work without signing
   in; a Claude login is only needed for the AI generation features.
+- **Installable (PWA)** — "Add to Home Screen" and Claude Studio launches
+  standalone with its own icon, like a native app. A service worker caches the
+  app shell for instant, offline-capable startup (dynamic requests — auth, AI
+  chat, C++ run, previews — always go to the network).
 
 ## Quick start
 
@@ -50,6 +54,20 @@ Then type what you want to build (e.g. *"a pomodoro timer with a circular progre
 ring"*) and watch it appear in the preview.
 
 > No subscription? Switch to the **Use API key** tab and paste an `sk-ant-…` key.
+
+## Install it as an app (PWA)
+
+Claude Studio is a Progressive Web App, so you can pin it to your phone or
+desktop and it runs full-screen like a native app:
+
+- **iOS (Safari):** Share → *Add to Home Screen*.
+- **Android (Chrome):** ⋮ menu → *Install app* / *Add to Home screen*.
+- **Desktop (Chrome/Edge):** the install icon in the address bar.
+
+> Browsers only offer install over **HTTPS** (or on `localhost` for testing).
+> To install from a phone, run the server behind HTTPS — e.g. put it behind a
+> TLS-terminating reverse proxy, or expose it with a tunnel like
+> `cloudflared` / `ngrok` — then open that `https://…` URL and install.
 
 ## How the Claude login works
 
