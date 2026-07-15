@@ -227,8 +227,18 @@ async function saveToFiles() {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-function closeFileMenu() { $('#file-menu').classList.add('hidden'); }
-function toggleFileMenu() { $('#file-menu').classList.toggle('hidden'); }
+function closeFileMenu() {
+  $('#file-menu').classList.add('hidden');
+  $('#menu-backdrop').classList.add('hidden');
+}
+function openFileMenu() {
+  $('#file-menu').classList.remove('hidden');
+  $('#menu-backdrop').classList.remove('hidden');
+}
+function toggleFileMenu() {
+  if ($('#file-menu').classList.contains('hidden')) openFileMenu();
+  else closeFileMenu();
+}
 
 // ---------------------------------------------------------------------------
 // Wiring
@@ -256,12 +266,14 @@ function boot() {
   $('#btn-file').onclick = (e) => { e.stopPropagation(); toggleFileMenu(); };
   $('#file-menu').onclick = (e) => {
     const act = e.target && e.target.dataset ? e.target.dataset.act : null;
+    if (!act) return;
     closeFileMenu();
     if (act === 'new') newFile();
     else if (act === 'open') openFromFiles();
     else if (act === 'save') saveToFiles();
   };
-  document.addEventListener('click', closeFileMenu);
+  // Tap anywhere off the menu (backdrop) to dismiss — reliable on iOS.
+  $('#menu-backdrop').onclick = closeFileMenu;
   $('#file-input').onchange = onFilePicked;
 
   // Rename by tapping the filename
