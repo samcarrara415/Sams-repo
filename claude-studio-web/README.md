@@ -1,4 +1,4 @@
-# ◆ C++ Playground
+# mcode
 
 A dead-simple, **fully in-browser C++ playground**: write C++, hit **▶ Run**, and
 the output prints to the terminal. No server, no account, no setup — and it

@@ -1,7 +1,7 @@
 {
-  "name": "C++ Playground",
-  "short_name": "C++ Play",
-  "description": "Write C++ and run it in your browser — output prints to the terminal. No setup, works offline.",
+  "name": "mcode",
+  "short_name": "mcode",
+  "description": "Write C++ and run it on a real gcc compiler from your browser — output prints to the terminal.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
