@@ -13,7 +13,19 @@ installs to your home screen as an app.
 3. Press **▶ Run** (or `Ctrl`/`Cmd` + `Enter`). Output shows in the terminal.
 4. Need input? Type it in the **stdin** box before running; read it with `cin`.
 
-Your code is saved in the browser automatically. **Reset** restores the starter.
+Your code is saved in the browser automatically.
+
+### Files
+
+Tap the **◆ file menu** (top-left):
+
+- **New file** — start fresh from the starter template.
+- **Open from Files…** — pick a `.cpp` (or `.h`, `.cc`, …) from the iOS **Files**
+  app / your device and load it into the editor.
+- **Save to Files…** — name it, then use the share sheet's **Save to Files** to
+  store it in the Files app (falls back to a normal download elsewhere).
+
+Tap the **filename** in the header to rename the current file.
 
 ## How it runs
 

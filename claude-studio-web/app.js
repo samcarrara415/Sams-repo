@@ -9,6 +9,7 @@
 const $ = (s) => document.querySelector(s);
 const LS_CODE = 'cpp_playground_code';
 const LS_STD = 'cpp_playground_std';
+const LS_NAME = 'cpp_playground_name';
 
 const WANDBOX_URL = 'https://wandbox.org/api/compile.json';
 const COMPILER = 'gcc-13.2.0';
@@ -36,7 +37,7 @@ int main() {
 }
 `;
 
-const state = { editor: null, ready: false, isMonaco: false, running: false, saveTimer: null };
+const state = { editor: null, ready: false, isMonaco: false, running: false, saveTimer: null, filename: 'main.cpp' };
 
 const escapeHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -165,15 +166,82 @@ function renderResult(data, started) {
 }
 
 // ---------------------------------------------------------------------------
+// File operations (New / Open from Files / Save to Files)
+// ---------------------------------------------------------------------------
+function setFilename(name) {
+  state.filename = (name || 'untitled.cpp').trim() || 'untitled.cpp';
+  $('#filename').textContent = state.filename;
+  try { localStorage.setItem(LS_NAME, state.filename); } catch {}
+}
+
+function newFile() {
+  if (!confirm('Start a new file? Unsaved changes to the current one will be replaced.')) return;
+  state.editor.setValue(STARTER);
+  setFilename('untitled.cpp');
+  scheduleSave();
+  if (state.isMonaco) setTimeout(() => state.editor.layout(), 0);
+}
+
+function openFromFiles() {
+  $('#file-input').value = '';
+  $('#file-input').click();
+}
+function onFilePicked(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.editor.setValue(String(reader.result || ''));
+    setFilename(file.name);
+    scheduleSave();
+    setStatus('', 'Opened ' + file.name);
+  };
+  reader.onerror = () => setStatus('err', 'Could not read file');
+  reader.readAsText(file);
+}
+
+async function saveToFiles() {
+  const name = (prompt('Save as:', state.filename) || '').trim();
+  if (!name) return;
+  const finalName = /\.[a-z0-9]+$/i.test(name) ? name : name + '.cpp';
+  setFilename(finalName);
+  const code = state.editor.getValue();
+
+  // Preferred on iOS: share sheet → "Save to Files".
+  try {
+    const file = new File([code], finalName, { type: 'text/plain' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: finalName });
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return; // user cancelled the share sheet
+  }
+
+  // Fallback: trigger a download (Safari's download manager also offers "Save to Files").
+  const blob = new Blob([code], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = finalName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function closeFileMenu() { $('#file-menu').classList.add('hidden'); }
+function toggleFileMenu() { $('#file-menu').classList.toggle('hidden'); }
+
+// ---------------------------------------------------------------------------
 // Wiring
 // ---------------------------------------------------------------------------
 function updateEnvLabel() { $('#term-env').textContent = 'gcc 13.2 · ' + (STD_LABELS[currentStd()] || currentStd()); }
 
 function boot() {
-  let saved = STARTER, savedStd = 'c++2a';
+  let saved = STARTER, savedStd = 'c++2a', savedName = 'main.cpp';
   try { saved = localStorage.getItem(LS_CODE) || STARTER; } catch {}
   try { savedStd = localStorage.getItem(LS_STD) || 'c++2a'; } catch {}
+  try { savedName = localStorage.getItem(LS_NAME) || 'main.cpp'; } catch {}
   if (STD_LABELS[savedStd]) $('#std').value = savedStd;
+  setFilename(savedName);
   updateEnvLabel();
   initEditor(saved);
 
@@ -183,9 +251,23 @@ function boot() {
     $('#output').innerHTML = '<span class="dim">Press <b>▶ Run</b> to compile &amp; run on a real gcc compiler. Output appears here.</span>';
     setStatus('', 'Ready');
   };
-  $('#btn-reset').onclick = () => {
-    if (state.ready) { state.editor.setValue(STARTER); scheduleSave(); }
-    if (state.isMonaco) setTimeout(() => state.editor.layout(), 0);
+
+  // File menu
+  $('#btn-file').onclick = (e) => { e.stopPropagation(); toggleFileMenu(); };
+  $('#file-menu').onclick = (e) => {
+    const act = e.target && e.target.dataset ? e.target.dataset.act : null;
+    closeFileMenu();
+    if (act === 'new') newFile();
+    else if (act === 'open') openFromFiles();
+    else if (act === 'save') saveToFiles();
+  };
+  document.addEventListener('click', closeFileMenu);
+  $('#file-input').onchange = onFilePicked;
+
+  // Rename by tapping the filename
+  $('#filename').onclick = () => {
+    const name = (prompt('Rename file:', state.filename) || '').trim();
+    if (name) setFilename(/\.[a-z0-9]+$/i.test(name) ? name : name + '.cpp');
   };
 }
 
