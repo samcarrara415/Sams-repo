@@ -80,8 +80,11 @@ body {
 }
 .brand-mark { color: var(--accent); }
 
+/* invisible full-screen catcher so a tap anywhere closes the menu (iOS-safe) */
+.menu-backdrop { position: fixed; inset: 0; z-index: 45; background: transparent; }
+
 /* file menu button + dropdown */
-.file-wrap { position: relative; flex: 0 0 auto; }
+.file-wrap { position: relative; flex: 0 0 auto; z-index: 46; }
 .icon-btn {
   display: inline-flex; align-items: center; gap: 4px;
   background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
