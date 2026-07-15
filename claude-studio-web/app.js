@@ -262,18 +262,20 @@ function boot() {
     setStatus('', 'Ready');
   };
 
-  // File menu
-  $('#btn-file').onclick = (e) => { e.stopPropagation(); toggleFileMenu(); };
-  $('#file-menu').onclick = (e) => {
+  // File menu. Use pointer events — iOS Safari doesn't reliably fire `click`
+  // on non-interactive elements like the backdrop.
+  $('#btn-file').addEventListener('pointerup', (e) => { e.preventDefault(); e.stopPropagation(); toggleFileMenu(); });
+  $('#file-menu').addEventListener('pointerup', (e) => {
     const act = e.target && e.target.dataset ? e.target.dataset.act : null;
     if (!act) return;
+    e.preventDefault();
     closeFileMenu();
     if (act === 'new') newFile();
     else if (act === 'open') openFromFiles();
     else if (act === 'save') saveToFiles();
-  };
-  // Tap anywhere off the menu (backdrop) to dismiss — reliable on iOS.
-  $('#menu-backdrop').onclick = closeFileMenu;
+  });
+  // Tap anywhere off the menu (backdrop) to dismiss.
+  $('#menu-backdrop').addEventListener('pointerdown', (e) => { e.preventDefault(); closeFileMenu(); });
   $('#file-input').onchange = onFilePicked;
 
   // Rename by tapping the filename
