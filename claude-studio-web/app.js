@@ -86,17 +86,77 @@ function initFallback(initialValue) {
   ta.setAttribute('autocomplete', 'off');
   host.appendChild(ta);
   ta.addEventListener('input', scheduleSave);
-  ta.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const s = ta.selectionStart, en = ta.selectionEnd;
-      ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(en);
-      ta.selectionStart = ta.selectionEnd = s + 4;
-    }
-  });
+  attachIdeKeys(ta);
   state.editor = { getValue: () => ta.value, setValue: (v) => { ta.value = v; }, layout: () => {} };
   state.isMonaco = false; state.ready = true;
+}
+
+// IDE-style typing for the native editor: auto-close brackets/quotes, wrap the
+// selection, type-over closers, auto-indent on Enter, and delete empty pairs.
+// Uses execCommand so the native Undo stack is preserved.
+function attachIdeKeys(ta) {
+  const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+  const CLOSERS = new Set([')', ']', '}', '"', "'"]);
+  const BLOCK = { '{': '}', '(': ')', '[': ']' };
+
+  const insert = (text, caret, caretEnd) => {
+    document.execCommand('insertText', false, text);
+    if (caret != null) ta.setSelectionRange(caret, caretEnd == null ? caret : caretEnd);
+  };
+
+  ta.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return; // leave shortcuts (undo, etc.) alone
+
+    const val = ta.value;
+    const s = ta.selectionStart, en = ta.selectionEnd;
+
+    if (e.key === 'Tab') { e.preventDefault(); insert('    '); return; }
+
+    // Auto-close a pair, or wrap the current selection in it.
+    if (PAIRS[e.key]) {
+      const open = e.key, close = PAIRS[e.key];
+      e.preventDefault();
+      if (s !== en) {
+        const sel = val.slice(s, en);
+        insert(open + sel + close, s + 1, s + 1 + sel.length);
+      } else if ((open === '"' || open === "'") && val[s] === open) {
+        ta.setSelectionRange(s + 1, s + 1); // type over an existing quote
+      } else {
+        insert(open + close, s + 1, s + 1);
+      }
+      return;
+    }
+
+    // Type over a closing bracket/quote instead of inserting a duplicate.
+    if (CLOSERS.has(e.key) && s === en && val[s] === e.key) {
+      e.preventDefault(); ta.setSelectionRange(s + 1, s + 1); return;
+    }
+
+    // Enter: keep the current indent; add a level inside an open block.
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const lineStart = val.lastIndexOf('\n', s - 1) + 1;
+      const indent = (val.slice(lineStart, s).match(/^[ \t]*/) || [''])[0];
+      const prev = val[s - 1], next = val[s];
+      if (BLOCK[prev]) {
+        const inner = indent + '    ';
+        if (next === BLOCK[prev]) insert('\n' + inner + '\n' + indent, s + 1 + inner.length, s + 1 + inner.length);
+        else insert('\n' + inner, s + 1 + inner.length, s + 1 + inner.length);
+      } else {
+        insert('\n' + indent);
+      }
+      return;
+    }
+
+    // Backspace between an empty pair deletes both characters.
+    if (e.key === 'Backspace' && s === en && s > 0 && PAIRS[val[s - 1]] === val[s]) {
+      e.preventDefault();
+      ta.setSelectionRange(s - 1, s + 1);
+      document.execCommand('delete');
+      return;
+    }
+  });
 }
 
 function scheduleSave() {
