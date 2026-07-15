@@ -46,7 +46,16 @@ function currentStd() { return $('#std').value; }
 // ---------------------------------------------------------------------------
 // Editor (Monaco with a textarea fallback)
 // ---------------------------------------------------------------------------
+// On touch devices (phones/tablets), Monaco doesn't use native text selection,
+// which makes selecting/deleting text painful. Use a native <textarea> there so
+// iOS selection handles, the magnifier, Select All, and Cut all work.
+function preferNativeEditor() {
+  try { return window.matchMedia('(hover: none) and (pointer: coarse)').matches; }
+  catch { return false; }
+}
+
 function initEditor(initialValue) {
+  if (preferNativeEditor()) return initFallback(initialValue);
   const finishMonaco = () => {
     const ed = monaco.editor.create($('#editor'), {
       value: initialValue, language: 'cpp', theme: 'vs-dark', automaticLayout: true,
@@ -69,7 +78,12 @@ function initFallback(initialValue) {
   if (state.ready) return;
   const host = $('#editor'); host.innerHTML = '';
   const ta = document.createElement('textarea');
-  ta.className = 'editor-fallback'; ta.spellcheck = false; ta.value = initialValue;
+  ta.className = 'editor-fallback'; ta.value = initialValue;
+  // Keep iOS from "helping" with code.
+  ta.spellcheck = false;
+  ta.setAttribute('autocapitalize', 'off');
+  ta.setAttribute('autocorrect', 'off');
+  ta.setAttribute('autocomplete', 'off');
   host.appendChild(ta);
   ta.addEventListener('input', scheduleSave);
   ta.addEventListener('keydown', (e) => {
