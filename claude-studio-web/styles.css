@@ -78,8 +78,38 @@ body {
   background: linear-gradient(180deg, #1a2029, var(--bg2));
   border-bottom: 1px solid var(--border);
 }
-.brand { font-weight: 800; font-size: 1.06rem; letter-spacing: -0.2px; display: flex; align-items: center; gap: 7px; }
 .brand-mark { color: var(--accent); }
+
+/* file menu button + dropdown */
+.file-wrap { position: relative; flex: 0 0 auto; }
+.icon-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  border-radius: 9px; padding: 8px 10px; cursor: pointer; font-size: 1rem;
+}
+.icon-btn:active { transform: scale(0.95); }
+.icon-btn .caret { color: var(--muted); font-size: 0.85rem; }
+.menu {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 50;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 11px;
+  padding: 6px; min-width: 210px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.menu button {
+  text-align: left; background: transparent; border: none; color: var(--text);
+  padding: 11px 12px; border-radius: 8px; font-size: 0.92rem; cursor: pointer;
+}
+.menu button:active, .menu button:hover { background: var(--accent); color: #2a1305; }
+
+/* filename chip (tap to rename) */
+.filename {
+  background: transparent; border: 1px solid transparent; color: var(--text);
+  font-weight: 700; font-size: 0.98rem; padding: 6px 8px; border-radius: 8px;
+  cursor: pointer; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+.filename:hover { border-color: var(--border2); }
+.filename:active { transform: scale(0.98); }
 
 .std-select { position: relative; display: inline-flex; }
 .std-select select {
