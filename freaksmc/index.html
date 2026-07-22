@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Primary SEO -->
+  <title>FreaksMC — Premium Minecraft Server Hosting | Low-Lag, DDoS-Protected</title>
+  <meta name="description" content="FreaksMC.com offers fast, affordable, DDoS-protected Minecraft server hosting with instant setup, one-click modpacks, 24/7 uptime, and full FTP access. Start your Minecraft server today." />
+  <meta name="keywords" content="Minecraft server hosting, cheap Minecraft hosting, best Minecraft server host, modded Minecraft hosting, FreaksMC, DDoS protected Minecraft server, low lag Minecraft hosting, Java and Bedrock hosting" />
+  <meta name="author" content="FreaksMC" />
+  <link rel="canonical" href="https://freaksmc.com/" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="FreaksMC" />
+  <meta property="og:title" content="FreaksMC — Premium Minecraft Server Hosting" />
+  <meta property="og:description" content="Fast, affordable, DDoS-protected Minecraft server hosting with instant setup, one-click modpacks, and 24/7 uptime." />
+  <meta property="og:url" content="https://freaksmc.com/" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FreaksMC — Premium Minecraft Server Hosting" />
+  <meta name="twitter:description" content="Fast, affordable, DDoS-protected Minecraft server hosting with instant setup and one-click modpacks." />
+
+  <!-- Structured data: Organization + Service -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "FreaksMC",
+    "url": "https://freaksmc.com/",
+    "description": "Premium Minecraft server hosting with DDoS protection, instant setup, and one-click modpacks.",
+    "sameAs": []
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "Minecraft Server Hosting",
+    "provider": { "@type": "Organization", "name": "FreaksMC", "url": "https://freaksmc.com/" },
+    "areaServed": "Worldwide",
+    "description": "Fast, affordable, DDoS-protected Minecraft server hosting supporting Java and Bedrock, modpacks, plugins, and 24/7 uptime."
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How fast can I set up a Minecraft server with FreaksMC?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Setup is instant. Your Minecraft server is provisioned automatically the moment you sign up at FreaksMC.com, so you can be online in under a minute." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does FreaksMC support modpacks and plugins?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. FreaksMC supports one-click modpack installs, plugins, Forge, Fabric, Paper, Spigot, and custom JARs, plus full FTP access for advanced configuration." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is FreaksMC hosting DDoS protected?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Every FreaksMC server includes enterprise-grade DDoS protection at no extra cost, keeping your community online and lag-free." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does FreaksMC support both Java and Bedrock Edition?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes, FreaksMC supports Java Edition, Bedrock Edition, and cross-play servers so all your friends can join no matter their device." }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121b2e;
+      --panel-2: #16223a;
+      --line: #223252;
+      --text: #e6edf7;
+      --muted: #93a3bd;
+      --green: #4ade80;
+      --green-2: #22c55e;
+      --accent: #7dd3fc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+    /* Nav */
+    header.nav {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(10px);
+      background: rgba(11,18,32,0.85);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; max-width: 1040px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: 0.3px; }
+    .brand .cube { width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--green-2)); box-shadow: 0 0 18px rgba(34,197,94,0.5); }
+    .nav-links { display: flex; gap: 22px; align-items: center; }
+    .nav-links a { text-decoration: none; color: var(--muted); font-size: 0.92rem; }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-block; text-decoration: none; font-weight: 700;
+      background: linear-gradient(135deg, var(--green), var(--green-2));
+      color: #05210f; padding: 11px 20px; border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(34,197,94,0.3); transition: transform .15s, box-shadow .15s;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(34,197,94,0.45); }
+    .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+
+    /* Hero */
+    .hero { padding: 80px 0 60px; text-align: center; position: relative; overflow: hidden; }
+    .hero::before {
+      content: ""; position: absolute; inset: -40% 0 auto 0; height: 500px;
+      background: radial-gradient(600px 300px at 50% 0%, rgba(34,197,94,0.18), transparent 70%);
+      pointer-events: none;
+    }
+    .eyebrow { display: inline-block; font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--green); background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); padding: 6px 14px; border-radius: 30px; margin-bottom: 22px; }
+    .hero h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); line-height: 1.12; font-weight: 800; margin-bottom: 18px; }
+    .hero h1 .grad { background: linear-gradient(135deg, var(--green), var(--accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p.lead { color: var(--muted); font-size: 1.12rem; max-width: 640px; margin: 0 auto 32px; }
+    .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .trust { margin-top: 34px; color: var(--muted); font-size: 0.85rem; display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+    .trust b { color: var(--text); }
+
+    /* Sections */
+    section { padding: 60px 0; }
+    .section-head { text-align: center; max-width: 620px; margin: 0 auto 46px; }
+    .section-head h2 { font-size: clamp(1.6rem, 3.5vw, 2.2rem); font-weight: 800; margin-bottom: 12px; }
+    .section-head p { color: var(--muted); }
+
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .feature { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 26px 22px; transition: border-color .2s, transform .2s; }
+    .feature:hover { border-color: rgba(34,197,94,0.5); transform: translateY(-3px); }
+    .feature .ic { font-size: 1.7rem; margin-bottom: 12px; }
+    .feature h3 { font-size: 1.06rem; margin-bottom: 6px; }
+    .feature p { color: var(--muted); font-size: 0.92rem; }
+
+    /* Pricing */
+    .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .plan { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 30px 26px; position: relative; text-align: center; }
+    .plan.popular { border-color: var(--green); box-shadow: 0 0 0 1px var(--green), 0 12px 40px rgba(34,197,94,0.18); }
+    .plan .badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--green), var(--green-2)); color: #05210f; font-size: 0.72rem; font-weight: 800; padding: 5px 14px; border-radius: 20px; letter-spacing: 0.5px; }
+    .plan h3 { font-size: 1.2rem; margin-bottom: 6px; }
+    .plan .price { font-size: 2.2rem; font-weight: 800; margin: 10px 0 4px; }
+    .plan .price span { font-size: 0.95rem; color: var(--muted); font-weight: 500; }
+    .plan .ram { color: var(--green); font-weight: 700; margin-bottom: 18px; }
+    .plan ul { list-style: none; text-align: left; margin: 0 0 24px; display: inline-block; }
+    .plan ul li { color: var(--muted); font-size: 0.92rem; padding: 5px 0 5px 26px; position: relative; }
+    .plan ul li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+    .price-note { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 24px; }
+
+    /* FAQ */
+    .faq { max-width: 780px; margin: 0 auto; }
+    details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 20px; margin-bottom: 12px; }
+    details summary { cursor: pointer; font-weight: 700; padding: 16px 0; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::after { content: "+"; color: var(--green); font-size: 1.4rem; font-weight: 400; }
+    details[open] summary::after { content: "–"; }
+    details p { color: var(--muted); padding: 0 0 18px; }
+
+    /* Final CTA */
+    .final { text-align: center; background: linear-gradient(135deg, var(--panel), var(--panel-2)); border: 1px solid var(--line); border-radius: 20px; padding: 56px 30px; margin: 20px 0; }
+    .final h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); margin-bottom: 14px; }
+    .final p { color: var(--muted); margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
+
+    footer.site { border-top: 1px solid var(--line); padding: 34px 0; color: var(--muted); font-size: 0.88rem; }
+    .foot-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    footer.site a { color: var(--accent); text-decoration: none; }
+    footer.site a:hover { text-decoration: underline; }
+
+    @media (max-width: 620px) { .nav-links a:not(.btn) { display: none; } }
+  </style>
+</head>
+<body>
+
+  <header class="nav">
+    <div class="nav-inner">
+      <div class="brand"><span class="cube"></span> FreaksMC</div>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a class="btn" href="https://freaksmc.com/" rel="noopener">Get Started</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap">
+        <span class="eyebrow">⚡ Minecraft Server Hosting</span>
+        <h1>Premium <span class="grad">Minecraft Server Hosting</span><br />built for lag-free worlds</h1>
+        <p class="lead">FreaksMC delivers fast, affordable, DDoS-protected Minecraft servers with instant setup, one-click modpacks, and 24/7 uptime. Spin up your world in under a minute.</p>
+        <div class="cta-row">
+          <a class="btn" href="https://freaksmc.com/" rel="noopener">Start Your Server →</a>
+          <a class="btn ghost" href="#pricing">View Plans</a>
+        </div>
+        <div class="trust">
+          <span><b>99.9%</b> uptime</span>
+          <span><b>Instant</b> setup</span>
+          <span><b>Free</b> DDoS protection</span>
+          <span><b>24/7</b> support</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Everything you need to run a great server</h2>
+          <p>Powerful hardware, simple tools, and a control panel anyone can use — whether it's your first server or your fiftieth.</p>
+        </div>
+        <div class="features">
+          <div class="feature"><div class="ic">🚀</div><h3>Instant Setup</h3><p>Your server is online the moment you sign up. No waiting, no manual configuration.</p></div>
+          <div class="feature"><div class="ic">🛡️</div><h3>Free DDoS Protection</h3><p>Enterprise-grade protection on every plan keeps your community online and lag-free.</p></div>
+          <div class="feature"><div class="ic">🧩</div><h3>One-Click Modpacks</h3><p>Forge, Fabric, Paper, Spigot, and thousands of modpacks install with a single click.</p></div>
+          <div class="feature"><div class="ic">⚙️</div><h3>Full FTP Access</h3><p>Complete control over your files, plugins, and configs for total customization.</p></div>
+          <div class="feature"><div class="ic">🌐</div><h3>Java &amp; Bedrock</h3><p>Host Java, Bedrock, or cross-play servers so everyone can join from any device.</p></div>
+          <div class="feature"><div class="ic">💾</div><h3>Automatic Backups</h3><p>Scheduled backups mean your world is always safe, one restore away.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing" style="background: var(--panel-2);">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Simple, honest pricing</h2>
+          <p>Pick a plan that fits your community. Upgrade or downgrade anytime — no lock-in.</p>
+        </div>
+        <div class="plans">
+          <div class="plan">
+            <h3>Starter</h3>
+            <div class="price">$3<span>/mo</span></div>
+            <div class="ram">2GB RAM</div>
+            <ul>
+              <li>Up to 10 players</li>
+              <li>Instant setup</li>
+              <li>DDoS protection</li>
+              <li>Modpack support</li>
+            </ul>
+            <a class="btn ghost" href="https://freaksmc.com/" rel="noopener">Choose Starter</a>
+          </div>
+          <div class="plan popular">
+            <span class="badge">MOST POPULAR</span>
+            <h3>Community</h3>
+            <div class="price">$8<span>/mo</span></div>
+            <div class="ram">6GB RAM</div>
+            <ul>
+              <li>Up to 40 players</li>
+              <li>Priority hardware</li>
+              <li>One-click modpacks</li>
+              <li>Automatic backups</li>
+              <li>24/7 support</li>
+            </ul>
+            <a class="btn" href="https://freaksmc.com/" rel="noopener">Choose Community</a>
+          </div>
+          <div class="plan">
+            <h3>Network</h3>
+            <div class="price">$16<span>/mo</span></div>
+            <div class="ram">12GB RAM</div>
+            <ul>
+              <li>Unlimited players</li>
+              <li>Dedicated resources</li>
+              <li>BungeeCord ready</li>
+              <li>Full FTP &amp; database</li>
+            </ul>
+            <a class="btn ghost" href="https://freaksmc.com/" rel="noopener">Choose Network</a>
+          </div>
+        </div>
+        <p class="price-note">Pricing shown as an example — see current plans and specs at <a href="https://freaksmc.com/" style="color:var(--green);" rel="noopener">FreaksMC.com</a>.</p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Frequently asked questions</h2>
+          <p>Everything you need to know before starting your Minecraft server.</p>
+        </div>
+        <div class="faq">
+          <details open>
+            <summary>How fast can I set up a Minecraft server?</summary>
+            <p>Instantly. Your FreaksMC server is provisioned automatically the moment you sign up, so you can be online and inviting friends in under a minute.</p>
+          </details>
+          <details>
+            <summary>Do you support modpacks and plugins?</summary>
+            <p>Yes — one-click installs for Forge, Fabric, Paper, Spigot, and thousands of modpacks, plus full FTP access and custom JAR uploads for advanced setups.</p>
+          </details>
+          <details>
+            <summary>Is DDoS protection included?</summary>
+            <p>Every plan includes enterprise-grade DDoS protection at no extra cost, keeping your server online even under attack.</p>
+          </details>
+          <details>
+            <summary>Do you support Java and Bedrock Edition?</summary>
+            <p>Both. Host Java, Bedrock, or cross-play servers so all your friends can join no matter what device they play on.</p>
+          </details>
+          <details>
+            <summary>Can I upgrade my plan later?</summary>
+            <p>Absolutely. Scale RAM and resources up or down anytime as your community grows — no downtime and no lock-in contracts.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section>
+      <div class="wrap">
+        <div class="final">
+          <h2>Ready to launch your Minecraft world?</h2>
+          <p>Join players who trust FreaksMC for fast, reliable, DDoS-protected hosting. Get started in minutes.</p>
+          <a class="btn" href="https://freaksmc.com/" rel="noopener">Get Started at FreaksMC.com →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap foot-inner">
+      <div>© FreaksMC — Premium Minecraft Server Hosting. Visit <a href="https://freaksmc.com/" rel="noopener">FreaksMC.com</a>.</div>
+      <div><a href="../">More projects</a></div>
+    </div>
+  </footer>
+
+</body>
+</html>
