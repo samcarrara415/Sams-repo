@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FOMO Radar — Meme Coin Screener</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0b0f1a;
+    --panel: #131a2b;
+    --panel-2: #1a2338;
+    --border: #263352;
+    --text: #e6ecf7;
+    --muted: #8b9bb8;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --accent: #7c8cff;
+    --accent-2: #b57cff;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(1200px 600px at 70% -10%, #1a1440 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 28px 16px 60px;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 22px; }
+  h1 {
+    font-size: 2.1rem; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #ffd77c, #ff7c9c 45%, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+
+  .disclaimer {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fbd38d;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin: 16px auto 22px;
+    max-width: 900px;
+  }
+
+  /* ---------- controls ---------- */
+  .controls {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex; flex-wrap: wrap; gap: 14px 22px;
+    align-items: flex-end;
+    margin-bottom: 18px;
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .ctrl select, .ctrl input[type=number] {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.9rem; min-width: 110px;
+  }
+  .chains { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip-toggle {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 20px; padding: 7px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip-toggle.on { background: #2b2670; border-color: var(--accent); color: #cdd5ff; }
+
+  .btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none; color: #fff; font-weight: 700; font-size: 0.9rem;
+    border-radius: 9px; padding: 10px 18px; cursor: pointer;
+  }
+  .btn:disabled { opacity: 0.5; cursor: wait; }
+  .btn.ghost { background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
+  .btn.ghost.on { color: #a7f3d0; border-color: #14532d; background: rgba(34,197,94,0.08); }
+
+  .statusbar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; color: var(--muted); font-size: 0.82rem; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; }
+  .dot.err { background: var(--red); }
+
+  /* ---------- cards ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+
+  .coin {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    position: relative;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .coin:hover { border-color: #3b4c78; transform: translateY(-2px); }
+
+  .coin-top { display: flex; align-items: center; gap: 10px; }
+  .rank { font-size: 0.75rem; font-weight: 800; color: #5b6b8f; min-width: 26px; }
+  .sym { font-size: 1.12rem; font-weight: 800; }
+  .name { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+  .badges { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .chain-badge {
+    font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 12px;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .hype { font-size: 0.9rem; }
+
+  .fomo-row { display: flex; align-items: center; gap: 12px; }
+  .fomo-score { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+  .fomo-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .meter { flex: 1; height: 8px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
+  .meter > div { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #fbbf24, #fb7185, #c084fc); }
+
+  .safety {
+    font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+  }
+  .safety.low  { background: rgba(34,197,94,0.12); color: #86efac; border: 1px solid rgba(34,197,94,0.4); }
+  .safety.med  { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.4); }
+  .safety.high { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--panel-2); border-radius: 9px; padding: 8px 10px; }
+  .stat .k { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .stat .v { font-size: 0.9rem; font-weight: 700; }
+
+  .changes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pc { font-size: 0.75rem; font-weight: 700; padding: 4px 9px; border-radius: 8px; background: var(--panel-2); }
+  .pc.up { color: #86efac; } .pc.down { color: #fca5a5; }
+  .pc span { color: var(--muted); font-weight: 600; margin-right: 4px; }
+
+  .holders { font-size: 0.8rem; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .holders b { color: var(--text); }
+  .trend-up { color: #86efac; font-weight: 700; }
+  .trend-flat { color: var(--muted); }
+
+  .flags { display: none; flex-direction: column; gap: 5px; border-top: 1px dashed var(--border); padding-top: 10px; }
+  .coin.open .flags { display: flex; }
+  .flag { font-size: 0.76rem; line-height: 1.4; }
+  .flag.bad::before { content: "⚠️ "; }
+  .flag.good::before { content: "✅ "; }
+
+  .links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .links a {
+    font-size: 0.74rem; font-weight: 700; color: #aab8ff; text-decoration: none;
+    background: var(--panel-2); border: 1px solid var(--border); padding: 5px 10px; border-radius: 8px;
+  }
+  .links a:hover { border-color: var(--accent); }
+  .expand { margin-left: auto; font-size: 0.74rem; color: var(--muted); cursor: pointer; background: none; border: none; }
+
+  .empty, .loading { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 0.95rem; grid-column: 1/-1; }
+  .spinner {
+    width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer { text-align: center; margin-top: 40px; color: #45536f; font-size: 0.78rem; line-height: 1.7; }
+  footer a { color: #6b7fb8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🚀 FOMO Radar</h1>
+    <p class="subtitle">Live screener for new low-cap meme coins with rapid momentum, growing buyers, and rug-risk checks</p>
+  </header>
+
+  <div class="disclaimer">
+    <b>⚠️ Not financial advice.</b> Meme coins are extremely high risk — most go to zero. The "rug risk" checks here are
+    <b>heuristics only</b>: they can flag obvious red flags (no sells, tiny liquidity, brand-new pools) but <b>cannot guarantee any
+    token is safe</b>. Contracts can hide mint/blacklist functions this tool can't see. Always verify with the audit links on each
+    card and never invest more than you can afford to lose.
+  </div>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label>Chains</label>
+      <div class="chains" id="chains"></div>
+    </div>
+    <div class="ctrl">
+      <label>Max Market Cap</label>
+      <select id="maxMc">
+        <option value="1000000">$1M</option>
+        <option value="5000000" selected>$5M</option>
+        <option value="10000000">$10M</option>
+        <option value="50000000">$50M</option>
+        <option value="Infinity">Any</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Min Liquidity</label>
+      <select id="minLiq">
+        <option value="5000">$5k</option>
+        <option value="10000" selected>$10k</option>
+        <option value="25000">$25k</option>
+        <option value="50000">$50k</option>
+        <option value="100000">$100k</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Min Buyers (24h)</label>
+      <select id="minBuyers">
+        <option value="0">Any</option>
+        <option value="25">25+</option>
+        <option value="50" selected>50+</option>
+        <option value="150">150+</option>
+        <option value="500">500+</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Min 1h Change</label>
+      <select id="minH1">
+        <option value="-Infinity">Any</option>
+        <option value="0" selected>Going up (0%+)</option>
+        <option value="5">+5%</option>
+        <option value="20">+20%</option>
+        <option value="50">+50%</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Risk Filter</label>
+      <select id="minSafety">
+        <option value="0">Show all</option>
+        <option value="45" selected>Hide high risk</option>
+        <option value="70">Lower risk only</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Sort By</label>
+      <select id="sortBy">
+        <option value="fomo" selected>🔥 FOMO Score</option>
+        <option value="h1">1h % Gain</option>
+        <option value="buyers">Buyers 24h</option>
+        <option value="newest">Newest</option>
+        <option value="safety">Safety</option>
+      </select>
+    </div>
+    <button class="btn" id="refreshBtn">Scan Now</button>
+    <button class="btn ghost on" id="autoBtn">Auto-refresh: ON</button>
+  </div>
+
+  <div class="statusbar">
+    <span id="status"><span class="dot"></span>Ready</span>
+    <span id="counts"></span>
+    <span id="updated"></span>
+  </div>
+
+  <div class="grid" id="grid">
+    <div class="loading"><div class="spinner"></div>Scanning fresh pools across chains…</div>
+  </div>
+
+  <footer>
+    Data: <a href="https://www.geckoterminal.com" target="_blank" rel="noopener">GeckoTerminal</a> (new + trending pools) ·
+    <a href="https://dexscreener.com" target="_blank" rel="noopener">DexScreener</a> (boost/hype signal) — free public APIs, refreshed every 60s.<br/>
+    "Buyers" = unique buying wallets reported by the DEX pool — a proxy for people starting to hold. On-chain holder counts,
+    contract audits and LP-lock status should be verified via the RugCheck / Honeypot / GoPlus links on each card.
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- config ----------
+  const GT = 'https://api.geckoterminal.com/api/v2';
+  const NETWORKS = [
+    { id: 'solana', label: 'Solana',   short: 'SOL',  dex: 'solana' },
+    { id: 'base',   label: 'Base',     short: 'BASE', dex: 'base' },
+    { id: 'eth',    label: 'Ethereum', short: 'ETH',  dex: 'ethereum' },
+    { id: 'bsc',    label: 'BNB',      short: 'BNB',  dex: 'bsc' },
+  ];
+  const REFRESH_MS = 60_000;
+
+  const state = {
+    chains: new Set(['solana', 'base']),
+    pools: new Map(),      // pooladdr -> normalized coin
+    boosts: new Map(),     // lowercased token addr -> boost total
+    auto: true,
+    timer: null,
+    loading: false,
+    lastError: null,
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- helpers ----------
+  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+
+  function fmtUsd(v) {
+    if (v == null) return '—';
+    if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+    if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'k';
+    return '$' + v.toFixed(v < 0.01 ? 6 : 2);
+  }
+  function fmtPrice(v) {
+    if (v == null) return '—';
+    if (v >= 1) return '$' + v.toFixed(2);
+    if (v >= 0.001) return '$' + v.toFixed(4);
+    if (v <= 0) return '$0';
+    // sub-penny: fixed notation with 3 significant digits (never scientific)
+    const decimals = Math.min(2 - Math.floor(Math.log10(v)), 12);
+    return '$' + v.toFixed(decimals);
+  }
+  function fmtPct(v) {
+    if (v == null) return '—';
+    const s = v >= 0 ? '+' : '';
+    return s + (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) + '%';
+  }
+  function fmtAge(ms) {
+    const m = ms / 60000;
+    if (m < 60) return Math.max(1, Math.round(m)) + 'm';
+    const h = m / 60;
+    if (h < 24) return h.toFixed(1).replace(/\.0$/, '') + 'h';
+    return (h / 24).toFixed(1).replace(/\.0$/, '') + 'd';
+  }
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  async function getJson(url) {
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(res.status + ' from ' + new URL(url).host);
+    return res.json();
+  }
+
+  // ---------- data fetch ----------
+  async function fetchNetworkPools(net) {
+    const urls = [
+      `${GT}/networks/${net}/new_pools?page=1&include=base_token`,
+      `${GT}/networks/${net}/trending_pools?page=1&include=base_token`,
+    ];
+    const results = await Promise.allSettled(urls.map(getJson));
+    if (!results.some(r => r.status === 'fulfilled')) {
+      throw new Error('all sources failed for ' + net);
+    }
+    const out = [];
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue;
+      const included = new Map();
+      for (const inc of r.value.included || []) {
+        if (inc.type === 'token') included.set(inc.id, inc.attributes || {});
+      }
+      for (const p of r.value.data || []) {
+        const c = normalizePool(p, included, net);
+        if (c) out.push(c);
+      }
+    }
+    return out;
+  }
+
+  async function fetchBoosts() {
+    // DexScreener paid "boosts" = teams actively marketing; used only as a hype badge.
+    try {
+      const data = await getJson('https://api.dexscreener.com/token-boosts/latest/v1');
+      const map = new Map();
+      for (const b of Array.isArray(data) ? data : []) {
+        if (b.tokenAddress) {
+          const k = b.tokenAddress.toLowerCase();
+          map.set(k, (map.get(k) || 0) + (num(b.amount) || 0));
+        }
+      }
+      state.boosts = map;
+    } catch { /* hype badge is optional */ }
+  }
+
+  function normalizePool(p, included, net) {
+    const a = p.attributes || {};
+    const rel = p.relationships || {};
+    const baseTokenId = rel.base_token?.data?.id || '';
+    const tokenAttrs = included.get(baseTokenId) || {};
+    const tokenAddr = (tokenAttrs.address || baseTokenId.replace(net + '_', '')) || '';
+
+    const price = num(a.base_token_price_usd);
+    const fdv = num(a.fdv_usd);
+    const mc = num(a.market_cap_usd) ?? fdv;   // meme coins: MC often unreported → FDV
+    const liq = num(a.reserve_in_usd);
+    const created = a.pool_created_at ? Date.parse(a.pool_created_at) : null;
+    if (price == null || liq == null) return null;
+
+    const pc = a.price_change_percentage || {};
+    const tx = a.transactions || {};
+    const vol = a.volume_usd || {};
+    const t = (k) => ({
+      buys: num(tx[k]?.buys) || 0, sells: num(tx[k]?.sells) || 0,
+      buyers: num(tx[k]?.buyers) || 0, sellers: num(tx[k]?.sellers) || 0,
+    });
+
+    let symbol = tokenAttrs.symbol || '';
+    let name = tokenAttrs.name || '';
+    if (!symbol && a.name) symbol = a.name.split('/')[0].trim();
+    if (!name) name = symbol;
+
+    return {
+      key: net + ':' + (a.address || p.id),
+      net,
+      poolAddr: a.address || '',
+      tokenAddr,
+      symbol, name,
+      price, mc, fdv, liq,
+      ageMs: created ? Date.now() - created : null,
+      pc: { m5: num(pc.m5), h1: num(pc.h1), h6: num(pc.h6), h24: num(pc.h24) },
+      vol24: num(vol.h24) || 0,
+      tx: { m5: t('m5'), h1: t('h1'), h24: t('h24') },
+    };
+  }
+
+  // ---------- scoring ----------
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function fomoScore(c) {
+    // Momentum (0–45): recent gains weighted toward the last hour
+    const h1 = clamp(c.pc.h1 ?? 0, -50, 150);
+    const m5 = clamp(c.pc.m5 ?? 0, -20, 50);
+    const h6 = clamp(c.pc.h6 ?? 0, -50, 300);
+    const momentum = clamp((h1 / 150) * 28 + (m5 / 50) * 9 + (h6 / 300) * 8, 0, 45);
+
+    // Crowd growth (0–30): unique buyers + acceleration of buying
+    const buyers24 = c.tx.h24.buyers;
+    const crowdBase = clamp(Math.log10(1 + buyers24) / Math.log10(2000), 0, 1) * 18;
+    const hourlyRate24 = buyers24 / 24;
+    const accel = hourlyRate24 > 0 ? clamp(c.tx.h1.buyers / hourlyRate24 / 4, 0, 1) * 12
+                 : (c.tx.h1.buyers > 5 ? 12 : 0);
+    const crowd = crowdBase + accel;
+
+    // Buy pressure (0–15)
+    const bt = c.tx.h1.buys + c.tx.h1.sells;
+    const pressure = bt >= 5 ? clamp((c.tx.h1.buys / bt - 0.5) * 2, 0, 1) * 15 : 4;
+
+    // Turnover (0–10): 24h volume vs valuation
+    const base = Math.max(c.mc || 0, c.liq, 1);
+    const turnover = clamp(c.vol24 / base / 2, 0, 1) * 10;
+
+    return Math.round(clamp(momentum + crowd + pressure + turnover, 0, 100));
+  }
+
+  function safetyCheck(c) {
+    let score = 100;
+    const flags = [];
+    const good = [];
+
+    // Liquidity depth
+    if (c.liq < 5000)       { score -= 40; flags.push('Very thin liquidity (' + fmtUsd(c.liq) + ') — easy to rug or impossible to exit'); }
+    else if (c.liq < 20000) { score -= 18; flags.push('Low liquidity (' + fmtUsd(c.liq) + ') — high slippage, easier to drain'); }
+    else if (c.liq >= 50000) good.push('Decent liquidity depth (' + fmtUsd(c.liq) + ')');
+
+    // Liquidity vs valuation
+    const valuation = c.fdv ?? c.mc;
+    if (valuation && valuation > 0) {
+      const ratio = c.liq / valuation;
+      if (ratio < 0.005)      { score -= 25; flags.push('Liquidity is under 0.5% of valuation — price is propped on almost nothing'); }
+      else if (ratio < 0.02)  { score -= 10; flags.push('Thin liquidity relative to market cap (<2%)'); }
+      else good.push('Healthy liquidity-to-cap ratio (' + (ratio * 100).toFixed(1) + '%)');
+    }
+
+    // Pool age — a brand-new pool can never rank better than "Caution"
+    let ageCap = 100;
+    if (c.ageMs != null) {
+      const h = c.ageMs / 3.6e6;
+      if (h < 1)        { score -= 20; ageCap = 60; flags.push('Pool is under 1 hour old — most rugs happen in the first hours'); }
+      else if (h < 12)  { score -= 10; flags.push('Very new pool (' + fmtAge(c.ageMs) + ' old)'); }
+      else if (h > 72)  good.push('Pool has survived ' + fmtAge(c.ageMs) + ' without being pulled');
+    }
+
+    // Honeypot proxy: people buy but nobody manages to sell
+    if (c.tx.h24.buys >= 20 && c.tx.h24.sells === 0) {
+      score -= 45; flags.push('Zero sells with ' + c.tx.h24.buys + ' buys — classic honeypot pattern');
+    } else if (c.tx.h24.sells > 0) {
+      good.push('Sells are going through (' + c.tx.h24.sells + ' in 24h) — not an obvious honeypot');
+    }
+
+    // Wash trading proxy
+    if (c.liq > 0 && c.vol24 / c.liq > 100) {
+      score -= 15; flags.push('Volume is ' + Math.round(c.vol24 / c.liq) + '× liquidity — possible wash trading');
+    }
+
+    // Crowd breadth
+    if (c.tx.h24.buyers < 20) { score -= 12; flags.push('Only ' + c.tx.h24.buyers + ' unique buyers in 24h — very few real holders yet'); }
+    else if (c.tx.h24.buyers >= 150) good.push(c.tx.h24.buyers + ' unique buyers in 24h — broad participation');
+
+    // Seller-domination (distribution/dump pattern)
+    const total = c.tx.h24.buys + c.tx.h24.sells;
+    if (total > 50 && c.tx.h24.sells / total > 0.75) {
+      score -= 12; flags.push('75%+ of trades are sells — holders are dumping');
+    }
+
+    return { score: Math.round(clamp(Math.min(score, ageCap), 0, 100)), flags, good };
+  }
+
+  // ---------- filtering + render ----------
+  function auditLinks(c) {
+    const links = [];
+    const netInfo = NETWORKS.find(n => n.id === c.net);
+    if (c.poolAddr) links.push(['Chart', `https://dexscreener.com/${netInfo.dex}/${c.poolAddr}`]);
+    links.push(['GeckoTerminal', `https://www.geckoterminal.com/${c.net}/pools/${c.poolAddr}`]);
+    if (c.tokenAddr) {
+      if (c.net === 'solana') {
+        links.push(['RugCheck', `https://rugcheck.xyz/tokens/${c.tokenAddr}`]);
+      } else {
+        links.push(['Honeypot', `https://honeypot.is/${c.net === 'bsc' ? '' : 'ethereum'}?address=${c.tokenAddr}`]);
+        const gp = { eth: '1', bsc: '56', base: '8453' }[c.net];
+        if (gp) links.push(['GoPlus', `https://gopluslabs.io/token-security/${gp}/${c.tokenAddr}`]);
+      }
+    }
+    return links;
+  }
+
+  function visibleCoins() {
+    const maxMc = parseFloat($('maxMc').value);
+    const minLiq = parseFloat($('minLiq').value);
+    const minBuyers = parseFloat($('minBuyers').value);
+    const minH1 = parseFloat($('minH1').value);
+    const minSafety = parseFloat($('minSafety').value);
+    const sortBy = $('sortBy').value;
+
+    let list = [...state.pools.values()].filter(c =>
+      state.chains.has(c.net) &&
+      (c.mc == null || c.mc <= maxMc) &&
+      c.liq >= minLiq &&
+      c.tx.h24.buyers >= minBuyers &&
+      (c.pc.h1 ?? -Infinity) >= minH1 &&
+      c.safety.score >= minSafety
+    );
+
+    const sorters = {
+      fomo:   (a, b) => b.fomo - a.fomo,
+      h1:     (a, b) => (b.pc.h1 ?? -1e9) - (a.pc.h1 ?? -1e9),
+      buyers: (a, b) => b.tx.h24.buyers - a.tx.h24.buyers,
+      newest: (a, b) => (a.ageMs ?? Infinity) - (b.ageMs ?? Infinity),
+      safety: (a, b) => b.safety.score - a.safety.score,
+    };
+    list.sort(sorters[sortBy] || sorters.fomo);
+    return list.slice(0, 60);
+  }
+
+  function pcChip(label, v) {
+    const cls = v == null ? '' : v >= 0 ? 'up' : 'down';
+    return `<div class="pc ${cls}"><span>${label}</span>${fmtPct(v)}</div>`;
+  }
+
+  function render() {
+    const grid = $('grid');
+    const list = visibleCoins();
+    $('counts').textContent = list.length + ' coins match · ' + state.pools.size + ' scanned';
+
+    if (!list.length) {
+      grid.innerHTML = `<div class="empty">No coins match the current filters.<br/>Try loosening Max MC / Min Buyers, or enable more chains.</div>`;
+      return;
+    }
+
+    grid.innerHTML = list.map((c, i) => {
+      const netInfo = NETWORKS.find(n => n.id === c.net) || { short: c.net };
+      const s = c.safety;
+      const sCls = s.score >= 70 ? 'low' : s.score >= 45 ? 'med' : 'high';
+      const sTxt = s.score >= 70 ? '🛡 Lower risk' : s.score >= 45 ? '⚠ Caution' : '☠ High risk';
+      const boost = c.tokenAddr && state.boosts.get(c.tokenAddr.toLowerCase());
+
+      const hourlyRate = c.tx.h24.buyers / 24;
+      const accel = hourlyRate > 0 && c.tx.h1.buyers > hourlyRate * 1.5;
+      const flagsHtml = [
+        ...s.flags.map(f => `<div class="flag bad">${esc(f)}</div>`),
+        ...s.good.map(f => `<div class="flag good">${esc(f)}</div>`),
+      ].join('') || '<div class="flag">No notable signals.</div>';
+
+      const links = auditLinks(c).map(([t, u]) =>
+        `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${t} ↗</a>`).join('');
+
+      return `
+      <div class="coin" data-key="${esc(c.key)}">
+        <div class="coin-top">
+          <div class="rank">#${i + 1}</div>
+          <div>
+            <div class="sym">${esc(c.symbol || '?')}</div>
+            <div class="name">${esc(c.name || '')}</div>
+          </div>
+          <div class="badges">
+            ${boost ? `<span class="hype" title="Actively promoted on DexScreener (paid boost) — hype, not endorsement">⚡</span>` : ''}
+            <span class="chain-badge">${esc(netInfo.short)}</span>
+          </div>
+        </div>
+
+        <div class="fomo-row">
+          <div>
+            <div class="fomo-score">${c.fomo}</div>
+            <div class="fomo-label">FOMO score</div>
+          </div>
+          <div class="meter"><div style="width:${c.fomo}%"></div></div>
+          <div class="safety ${sCls}">${sTxt} · ${s.score}</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="k">Price</div><div class="v">${fmtPrice(c.price)}</div></div>
+          <div class="stat"><div class="k">Mkt Cap</div><div class="v">${fmtUsd(c.mc)}</div></div>
+          <div class="stat"><div class="k">Liquidity</div><div class="v">${fmtUsd(c.liq)}</div></div>
+          <div class="stat"><div class="k">Vol 24h</div><div class="v">${fmtUsd(c.vol24)}</div></div>
+          <div class="stat"><div class="k">Age</div><div class="v">${c.ageMs != null ? fmtAge(c.ageMs) : '—'}</div></div>
+          <div class="stat"><div class="k">Buys/Sells 24h</div><div class="v">${c.tx.h24.buys}/${c.tx.h24.sells}</div></div>
+        </div>
+
+        <div class="changes">
+          ${pcChip('5m', c.pc.m5)}${pcChip('1h', c.pc.h1)}${pcChip('6h', c.pc.h6)}${pcChip('24h', c.pc.h24)}
+        </div>
+
+        <div class="holders">
+          👥 <b>${c.tx.h24.buyers}</b> unique buyers 24h · <b>${c.tx.h1.buyers}</b> last hour
+          ${accel ? '<span class="trend-up">▲ accelerating</span>' : '<span class="trend-flat">— steady</span>'}
+        </div>
+
+        <div class="flags">${flagsHtml}</div>
+
+        <div class="links">
+          ${links}
+          <button class="expand">risk details ▾</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- refresh loop ----------
+  async function refresh() {
+    if (state.loading) return;
+    state.loading = true;
+    $('refreshBtn').disabled = true;
+    $('status').innerHTML = '<span class="dot"></span>Scanning…';
+
+    const nets = [...state.chains];
+    const jobs = [fetchBoosts(), ...nets.map(n => fetchNetworkPools(n))];
+    const results = await Promise.allSettled(jobs);
+
+    let ok = 0, fail = 0;
+    const fresh = new Map();
+    results.slice(1).forEach((r) => {
+      if (r.status === 'fulfilled') {
+        ok++;
+        for (const c of r.value) {
+          c.fomo = fomoScore(c);
+          c.safety = safetyCheck(c);
+          fresh.set(c.key, c);
+        }
+      } else fail++;
+    });
+
+    if (ok > 0) {
+      // keep pools from chains that weren't part of this scan so toggling back is instant
+      for (const [k, v] of state.pools) {
+        if (!nets.includes(v.net) && !fresh.has(k)) fresh.set(k, v);
+      }
+      state.pools = fresh;
+    }
+
+    state.loading = false;
+    $('refreshBtn').disabled = false;
+    $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    $('status').innerHTML = fail && !ok
+      ? '<span class="dot err"></span>API unreachable — retrying next cycle'
+      : fail ? '<span class="dot err"></span>Partial data (' + fail + ' source(s) failed)'
+             : '<span class="dot"></span>Live';
+    render();
+  }
+
+  function schedule() {
+    clearInterval(state.timer);
+    if (state.auto) state.timer = setInterval(refresh, REFRESH_MS);
+  }
+
+  // ---------- UI wiring ----------
+  function buildChainToggles() {
+    $('chains').innerHTML = NETWORKS.map(n =>
+      `<button class="chip-toggle ${state.chains.has(n.id) ? 'on' : ''}" data-net="${n.id}">${n.label}</button>`
+    ).join('');
+  }
+
+  $('chains').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-net]');
+    if (!btn) return;
+    const id = btn.dataset.net;
+    if (state.chains.has(id)) {
+      if (state.chains.size === 1) return; // keep at least one
+      state.chains.delete(id);
+    } else state.chains.add(id);
+    buildChainToggles();
+    refresh();
+  });
+
+  for (const id of ['maxMc', 'minLiq', 'minBuyers', 'minH1', 'minSafety', 'sortBy'])
+    $(id).addEventListener('change', render);
+
+  $('refreshBtn').addEventListener('click', refresh);
+  $('autoBtn').addEventListener('click', () => {
+    state.auto = !state.auto;
+    $('autoBtn').textContent = 'Auto-refresh: ' + (state.auto ? 'ON' : 'OFF');
+    $('autoBtn').classList.toggle('on', state.auto);
+    schedule();
+  });
+
+  $('grid').addEventListener('click', (e) => {
+    const btn = e.target.closest('.expand');
+    if (!btn) return;
+    const card = btn.closest('.coin');
+    card.classList.toggle('open');
+    btn.textContent = card.classList.contains('open') ? 'risk details ▴' : 'risk details ▾';
+  });
+
+  // ---------- boot ----------
+  buildChainToggles();
+  refresh();
+  schedule();
+})();
+</script>
+</body>
+</html>
