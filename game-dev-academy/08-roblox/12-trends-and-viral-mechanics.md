@@ -145,7 +145,7 @@ What gets clipped (from the teardowns in `10-top-games-teardowns.md`):
 | Game | Rise | Peak | After | Now (Oct 26 2026, LiveCounts [U]) | Now ÷ peak (our maths) |
 |---|---|---|---|---|---|
 | Grow a Garden | Mar 26 2025 launch → 1M CCU in ~a month ([GamesBeat](https://gamesbeat.com/janzen-madsen-interview/) [S]) | 21.6M, Jul 2025 [P] | Out of top 10 by Dec 2025 [S] | 15,274 | ~0.07% |
-| Steal a Brainrot | May 16 2025 → 5M by Jul ([Wikipedia](https://en.wikipedia.org/wiki/Steal_a_Brainrot) [U]) | 25.4M, Oct 2025 [S] | ~215K by ~Mar 2026 [U] | 276,574 | ~1.1% |
+| Steal a Brainrot | May 16 2025 → 5M by Jul ([Wikipedia](https://en.wikipedia.org/wiki/Steal_a_Brainrot) [U]) | 25.87M, Oct 11 2025 (Guinness) [S] | ~215K by ~Mar 2026 [U] | 276,574 | ~1.1% |
 | Escape Tsunami for Brainrots | Dec 15 2025 → #1 in Jan 2026 [U] | ~5M [U] | ~164K by ~Mar 2026 [U] | (not in top 97) | ~3% by Mar |
 | Animal Hospital | May 10 2026 → 57K in month one → 580K Jun 28 [S] | 736,948, Jul 5 2026 (Rolimons) [S] | −90% Aug → Sept [U] | 21,537 | ~2.9% |
 | Steal An Egg | Jul 25 2026 → 500K+ by Aug 24 [U] | 13.8–14.3M, Sept 2026 [U] | ~969K end of Sept [U] | 765,349 | ~5–6% (still early) |

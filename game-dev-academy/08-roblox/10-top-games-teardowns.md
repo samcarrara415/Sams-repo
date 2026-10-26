@@ -81,7 +81,7 @@ How to read each card: "**First 5 minutes**" is drawn from guides and press desc
 
 | | |
 |---|---|
-| **Peak CCU** | "Over 25 million", Sept 2025 ([Roblox Replay](https://about.roblox.com/newsroom/2025/12/roblox-replay-decoded-search-style) [P]). 25.4M in Oct 2025 ([PocketGamer.biz](https://www.pocketgamer.biz/robloxs-steal-a-brainrot-becomes-first-game-to-surpass-25m-concurrent-players/) [S]). A Bruno Mars in-game concert drew 12.8M CCU in Jan 2026 ([PocketGamer.biz](https://www.pocketgamer.biz/roblox-reports-record-128m-concurrent-users-for-bruno-mars-virtual-concert/) [S]) |
+| **Peak CCU** | "Over 25 million", Sept 2025 ([Roblox Replay](https://about.roblox.com/newsroom/2025/12/roblox-replay-decoded-search-style) [P]). Record **25,868,678** on Oct 11 2025 per Guinness [S] (see `06-market-research/02-what-kids-play-and-why.md`); PocketGamer.biz reported it as 25.4M+ during the climb ([PocketGamer.biz](https://www.pocketgamer.biz/robloxs-steal-a-brainrot-becomes-first-game-to-surpass-25m-concurrent-players/) [S]). A Bruno Mars in-game concert drew 12.8M CCU in Jan 2026 ([PocketGamer.biz](https://www.pocketgamer.biz/roblox-reports-record-128m-concurrent-users-for-bruno-mars-virtual-concert/) [S]) |
 | **Now** | ~215K around late Mar 2026, "a 99.2% decline from peak" ([RoWatcher](https://rowatcher.com/news/is-the-brainrot-trend-dying-what-ccu-data-from-three-top-games-reveals) [U]). 276,574 on Oct 26 2026 ([LiveCounts](https://livecounts.nl/roblox-charts/) [U]) |
 | **Genre** | Idle collector + PvP stealing ("capture the flag with meme characters") |
 | **Core loop** | Buy brainrots off a conveyor → they earn passive income in your base → steal rarer ones from others → rebirth for multipliers |
