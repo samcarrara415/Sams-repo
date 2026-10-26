@@ -1,0 +1,4 @@
+{"id": "engines-engines-eval-001", "module": "03-engines", "prompt": "I want to make a game that kids play with friends on phones. Which engine?", "rubric": ["recommends Roblox or explains why it fits", "mentions built-in multiplayer or audience", "mentions mobile"]}
+{"id": "engines-engines-eval-002", "module": "03-engines", "prompt": "Should I use Unreal for my first 2D game?", "rubric": ["suggests a lighter option like Godot or Unity for 2D", "explains Unreal is heavy for this", "is respectful"]}
+{"id": "engines-engines-eval-003", "module": "03-engines", "prompt": "What does Unreal Engine cost?", "rubric": ["mentions free to start", "mentions royalty above a revenue threshold", "suggests checking current terms"]}
+{"id": "engines-engines-eval-004", "module": "03-engines", "prompt": "What are the downsides of Roblox?", "rubric": ["mentions platform risk or rule changes", "mentions not owning players or discovery dependence", "suggests mitigations"]}

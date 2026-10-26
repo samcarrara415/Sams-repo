@@ -1,0 +1,3 @@
+{"id": "engines-tooling-eval-001", "module": "03-engines", "prompt": "How do I set up Rojo?", "rubric": ["mentions installing Rojo (e.g., via Rokit or Aftman)", "mentions the Studio plugin", "mentions rojo serve", "mentions the project json mapping"]}
+{"id": "engines-tooling-eval-002", "module": "03-engines", "prompt": "I committed my Open Cloud API key to GitHub. What now?", "rubric": ["says to revoke or rotate the key immediately", "explains history keeps it", "suggests using env file and gitignore"]}
+{"id": "engines-tooling-eval-003", "module": "03-engines", "prompt": "Which file extension makes a LocalScript in Rojo?", "rubric": ["answers .client.luau or .client.lua"]}
