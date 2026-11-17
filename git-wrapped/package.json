@@ -1,0 +1,37 @@
+{
+  "name": "git-wrapped",
+  "version": "1.0.0",
+  "description": "Your year in git, wrapped. A Spotify-Wrapped-style recap of your commits: streaks, heatmap, top languages, peak hours and your coding personality, plus a shareable card.",
+  "type": "module",
+  "bin": {
+    "git-wrapped": "bin/git-wrapped.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "start": "node bin/git-wrapped.js",
+    "demo": "node bin/git-wrapped.js --demo",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "git",
+    "wrapped",
+    "year-in-review",
+    "cli",
+    "stats",
+    "commits",
+    "heatmap",
+    "developer-tools"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samcarrara415/Sams-repo.git",
+    "directory": "git-wrapped"
+  },
+  "license": "MIT"
+}
