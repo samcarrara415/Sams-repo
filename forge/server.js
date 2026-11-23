@@ -299,6 +299,6 @@ app.get('/preview/:id', (req, res) => res.redirect(`/preview/${req.params.id}/`)
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, HOST, () => {
-  console.log(`Claude Studio listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  console.log(`Forge listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   if (!SERVER_API_KEY) console.log('No ANTHROPIC_API_KEY set; users will be asked for their own key.');
 });

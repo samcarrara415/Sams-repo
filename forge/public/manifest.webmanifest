@@ -1,6 +1,6 @@
 {
-  "name": "Claude Studio",
-  "short_name": "Claude Studio",
+  "name": "Forge",
+  "short_name": "Forge",
   "description": "Describe a web app or C++ program and Claude writes it.",
   "id": "/",
   "start_url": "/",

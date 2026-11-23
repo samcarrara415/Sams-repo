@@ -48,7 +48,7 @@ async function api(path, { method = 'GET', body } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error('Could not reach the Claude Studio server.');
+    throw new Error('Could not reach the Forge server.');
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status}).`);
@@ -759,7 +759,7 @@ async function sendChat() {
     });
     if (!finished) fail('The connection closed before the response finished.');
   } catch {
-    fail('Lost the connection to the Claude Studio server.');
+    fail('Lost the connection to the Forge server.');
   } finally {
     reply.classList.remove('streaming');
     state.generating = false;
@@ -828,5 +828,5 @@ if ('serviceWorker' in navigator) {
 
 boot().catch((err) => {
   document.body.insertAdjacentHTML('afterbegin',
-    `<div class="boot-error">Claude Studio failed to start: ${escapeHtml(err.message)}</div>`);
+    `<div class="boot-error">Forge failed to start: ${escapeHtml(err.message)}</div>`);
 });

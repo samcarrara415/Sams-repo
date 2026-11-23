@@ -1,7 +1,7 @@
 // Caches the static app shell so the installed app opens without a network
 // round trip. API calls, chat streams and previews always go to the network.
 
-const CACHE = 'claude-studio-v2';
+const CACHE = 'forge-v2';
 const SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

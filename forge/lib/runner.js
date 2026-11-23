@@ -79,7 +79,7 @@ async function writeSources(dir, files) {
 }
 
 async function compileAndRunCpp(files, stdin) {
-  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'claude-studio-'));
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'forge-'));
   try {
     const sources = await writeSources(dir, files);
     if (!sources.length) {

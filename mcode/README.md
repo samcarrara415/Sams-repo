@@ -5,7 +5,7 @@ compiler output and program output appear in the terminal pane below the
 editor. It is a static site with no build step and no backend of its own, and
 it can be installed to a phone's home screen as a web app.
 
-Live: https://samcarrara415.github.io/Sams-repo/claude-studio-web/
+Live: https://samcarrara415.github.io/Sams-repo/mcode/
 
 ## Using it
 

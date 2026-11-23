@@ -1,5 +1,5 @@
 {
-  "name": "claude-studio",
+  "name": "forge",
   "version": "1.0.0",
   "private": true,
   "description": "Describe a web app or C++ program and Claude writes it. Browser IDE with live preview and a g++ runner.",

@@ -1,4 +1,4 @@
-# Claude Studio
+# Forge
 
 A browser IDE where you describe an app in chat and Claude writes the files. There are two project types:
 
@@ -18,7 +18,7 @@ This is an independent project and is not affiliated with Anthropic.
 ## Setup
 
 ```bash
-cd claude-studio
+cd forge
 npm install
 npm start
 ```
@@ -53,11 +53,11 @@ The console shows compiler errors, program output, the exit code, or the signal 
 
 ## Security
 
-**The C++ runner is not a sandbox.** Programs run as the same user as the server, with that user's access to files and the network. The time and output limits stop runaway programs; they don't stop malicious ones. Run Claude Studio on your own machine or a disposable VM or container, not on a shared or public server.
+**The C++ runner is not a sandbox.** Programs run as the same user as the server, with that user's access to files and the network. The time and output limits stop runaway programs; they don't stop malicious ones. Run Forge on your own machine or a disposable VM or container, not on a shared or public server.
 
 The server listens on 127.0.0.1 by default for this reason. Set `HOST=0.0.0.0` only on a network you trust. If you put it on the internet, put real isolation around the runner (a container per run, seccomp, cgroup limits) and authentication in front of the app.
 
-Web app previews are served with a `Content-Security-Policy: sandbox` header and loaded in a sandboxed iframe, so generated code runs in an opaque origin and can't call the Claude Studio API with your session, even when the preview is opened in its own tab.
+Web app previews are served with a `Content-Security-Policy: sandbox` header and loaded in a sandboxed iframe, so generated code runs in an opaque origin and can't call the Forge API with your session, even when the preview is opened in its own tab.
 
 ## Limits
 
@@ -78,4 +78,4 @@ public/            Front end (no build step): index.html, app.js, styles.css, se
 
 ## Testing without an API key
 
-`ANTHROPIC_BASE_URL` points the Anthropic client at a different server. Running a small local server that speaks the Messages API streaming format and starting Claude Studio with `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>` lets you exercise the chat flow, including error cases, without calling the real API.
+`ANTHROPIC_BASE_URL` points the Anthropic client at a different server. Running a small local server that speaks the Messages API streaming format and starting Forge with `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>` lets you exercise the chat flow, including error cases, without calling the real API.
