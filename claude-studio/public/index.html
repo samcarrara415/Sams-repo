@@ -2,155 +2,164 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <title>Claude Studio — build apps with your Claude subscription</title>
-  <meta name="description" content="Build web apps and C++ programs by chatting with AI — powered by your own Claude subscription." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Claude Studio</title>
+  <meta name="description" content="Describe a web app or C++ program and Claude writes it. Edit the files, preview the app, or compile and run the program." />
 
-  <!-- PWA / installable app -->
   <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="theme-color" content="#161b22" />
+  <meta name="theme-color" content="#171a1f" />
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-
-  <!-- iOS "Add to Home Screen" -->
   <link rel="apple-touch-icon" href="/icon-180.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="Claude Studio" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="kind-web">
+<body class="kind-web" data-mview="code">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-logo" viewBox="0 0 16 16"><rect width="16" height="16" rx="3" fill="currentColor"/><path d="M4.5 5l3 3-3 3M8.5 11.5h3" fill="none" stroke="#171a1f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+      <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.75h5l3.25 3.25v9.25H4z M9 1.75V5h3.25" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+      <symbol id="i-files" viewBox="0 0 16 16"><path d="M5.5 1.75h4.5l3 3v7.5h-7.5z M10 1.75v3h3 M3 4.5v9.75h7" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+      <symbol id="i-web" viewBox="0 0 16 16"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1.75 5.75h12.5" stroke="currentColor" stroke-width="1.2"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 16 16"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 6.25L6.75 8 4.5 9.75M8 10.25h3.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-code" viewBox="0 0 16 16"><path d="M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 16 16"><path d="M2.25 3.25h11.5v7.5H7l-3 2.5v-2.5H2.25z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+      <symbol id="i-play" viewBox="0 0 16 16"><path d="M4.5 2.75v10.5L13 8z" fill="currentColor"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5v3h-3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-external" viewBox="0 0 16 16"><path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v4h-9v-9h4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-pencil" viewBox="0 0 16 16"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 16 16"><path d="M2.5 4.25h11M6 4.25V2.5h4v1.75M4 4.25l.75 9.25h6.5L12 4.25" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+      <symbol id="i-close" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+      <symbol id="i-key" viewBox="0 0 16 16"><circle cx="5.5" cy="10.5" r="3" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7.6 8.4L13.5 2.5M11 5l1.75 1.75M12.25 3.75L14 5.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></symbol>
+    </defs>
+  </svg>
 
-  <!-- ===================== Login overlay ===================== -->
-  <div id="login" class="overlay hidden">
-    <div class="login-card">
-      <button id="login-close" class="login-close" title="Continue without logging in">✕</button>
-      <div class="brand-big">◆ Claude Studio</div>
-      <p class="login-sub">Build apps by chatting with AI — powered by <b>your own Claude subscription</b>. The editor &amp; C++ runner work without logging in; a login is only needed for AI generation.</p>
-
-      <div class="tabs">
-        <button class="tab active" data-tab="claude">Log in with Claude</button>
-        <button class="tab" data-tab="apikey">Use API key</button>
-      </div>
-
-      <!-- Claude OAuth tab -->
-      <div class="tab-panel" data-panel="claude">
-        <ol class="steps">
-          <li>Click <b>Authorize with Claude</b> — a Claude tab opens.</li>
-          <li>Approve access. Claude shows you an authorization code.</li>
-          <li>Paste that code below and connect.</li>
-        </ol>
-        <button id="btn-authorize" class="btn btn-primary btn-block">Authorize with Claude ↗</button>
-        <input id="claude-code" class="input" placeholder="Paste the code shown after authorizing" />
-        <button id="btn-connect" class="btn btn-block" disabled>Connect subscription</button>
-        <p class="hint">Uses the standard Claude OAuth flow. Your subscription runs the AI — no API key needed.</p>
-      </div>
-
-      <!-- API key tab -->
-      <div class="tab-panel hidden" data-panel="apikey">
-        <input id="api-key" class="input" type="password" placeholder="sk-ant-..." />
-        <button id="btn-apikey" class="btn btn-primary btn-block">Use this key</button>
-        <p class="hint">Billed to your Anthropic API account instead of a subscription.</p>
-      </div>
-
-      <div id="login-error" class="error hidden"></div>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="icon brand-mark"><use href="#i-logo"/></svg>
+      <span class="brand-name">Claude Studio</span>
     </div>
-  </div>
+    <span class="project-name" id="project-name"></span>
+    <span class="save-status" id="save-status" aria-live="polite"></span>
+    <div class="spacer"></div>
+    <button id="btn-run" class="btn btn-primary cpp-only" title="Compile and run (Ctrl+Enter)">
+      <svg class="icon"><use href="#i-play"/></svg><span>Run</span>
+    </button>
+    <button id="btn-key" class="btn" title="Anthropic API key">
+      <svg class="icon"><use href="#i-key"/></svg><span id="key-label">API key</span>
+    </button>
+  </header>
 
-  <!-- ===================== App shell ===================== -->
-  <div id="app" class="hidden">
-    <header class="topbar">
-      <button id="btn-menu" class="btn btn-ghost btn-sm menu-only" title="Files">☰</button>
-      <div class="brand">◆ Claude Studio</div>
-      <div class="project-name" id="project-name">—</div>
-      <div class="spacer"></div>
-      <select id="model-select" class="model-select" title="Model"></select>
-      <span id="auth-badge" class="badge hidden"></span>
-      <button id="btn-login" class="btn btn-primary btn-sm hidden">Log in with Claude</button>
-      <button id="btn-logout" class="btn btn-ghost btn-sm hidden">Log out</button>
-    </header>
-
-    <div class="layout">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="side-section">
-          <div class="side-head">
-            <span>Projects</span>
-            <div class="new-wrap">
-              <button id="btn-new-project" class="btn btn-sm" title="New project">+</button>
-              <div id="new-menu" class="new-menu hidden">
-                <button data-kind="web">🌐 Web app</button>
-                <button data-kind="cpp">🔧 C++ program</button>
-              </div>
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="side-section">
+        <div class="section-head">
+          <h2>Projects</h2>
+          <div class="menu-wrap">
+            <button id="btn-new-project" class="icon-btn" title="New project" aria-haspopup="menu" aria-expanded="false">
+              <svg class="icon"><use href="#i-plus"/></svg>
+            </button>
+            <div id="new-menu" class="menu" role="menu" hidden>
+              <button role="menuitem" data-kind="web"><svg class="icon"><use href="#i-web"/></svg>Web app</button>
+              <button role="menuitem" data-kind="cpp"><svg class="icon"><use href="#i-terminal"/></svg>C++ program</button>
             </div>
           </div>
-          <ul id="project-list" class="list"></ul>
         </div>
-        <div class="side-section grow">
-          <div class="side-head">
-            <span>Files</span>
-            <button id="btn-new-file" class="btn btn-sm" title="New file">+</button>
-          </div>
-          <ul id="file-list" class="list"></ul>
-        </div>
-      </aside>
-
-      <!-- Editor -->
-      <main class="editor-col">
-        <div class="tabbar" id="tabbar"></div>
-        <div id="editor" class="editor"></div>
-      </main>
-
-      <!-- Preview / console + chat -->
-      <section class="right-col">
-        <!-- Web preview -->
-        <div class="preview-wrap" id="web-preview">
-          <div class="panel-head">
-            <span>Preview</span>
-            <div class="spacer"></div>
-            <button id="btn-refresh" class="btn btn-sm" title="Reload">⟳</button>
-            <button id="btn-open" class="btn btn-sm" title="Open in new tab">↗</button>
-          </div>
-          <iframe id="preview" class="preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
-        </div>
-
-        <!-- C++ console -->
-        <div class="preview-wrap" id="cpp-console">
-          <div class="panel-head">
-            <span>Console</span>
-            <div class="spacer"></div>
-            <button id="btn-clear-console" class="btn btn-sm" title="Clear">Clear</button>
-            <button id="btn-run" class="btn btn-primary btn-sm" title="Compile &amp; run (Ctrl/Cmd+Enter)">▶ Run</button>
-          </div>
-          <pre id="cpp-output" class="console-out"><span class="console-dim">Press ▶ Run to compile and execute with g++.</span></pre>
-          <div class="stdin-row">
-            <input id="cpp-stdin" class="stdin-input" placeholder="Program input (stdin) — one line per prompt" />
-          </div>
-        </div>
-
-        <!-- Chat -->
-        <div class="chat-wrap">
-          <div class="panel-head"><span>Build with Claude</span></div>
-          <div id="chat" class="chat"></div>
-          <form id="chat-form" class="chat-form">
-            <textarea id="chat-input" class="chat-input" rows="2"
-              placeholder="Describe an app to build, or an edit to make…"></textarea>
-            <button id="chat-send" class="btn btn-primary" type="submit">Send</button>
-          </form>
-        </div>
+        <ul id="project-list" class="list"></ul>
       </section>
-    </div>
+      <section class="side-section grow">
+        <div class="section-head">
+          <h2>Files</h2>
+          <button id="btn-new-file" class="icon-btn" title="New file">
+            <svg class="icon"><use href="#i-plus"/></svg>
+          </button>
+        </div>
+        <ul id="file-list" class="list"></ul>
+      </section>
+    </aside>
 
-    <!-- Mobile bottom nav -->
-    <nav class="mobile-nav">
-      <button data-mview="files"><span>📁</span>Files</button>
-      <button data-mview="code" class="active"><span>〈〉</span>Code</button>
-      <button data-mview="preview" id="mnav-run"><span>▶</span><span id="mnav-run-label">Preview</span></button>
-      <button data-mview="chat"><span>💬</span>Chat</button>
-    </nav>
+    <main class="editor-col">
+      <div class="tabbar" id="tabbar" role="tablist"></div>
+      <div id="editor" class="editor"></div>
+    </main>
+
+    <section class="right-col">
+      <div class="panel" id="web-preview">
+        <div class="panel-head">
+          <h2>Preview</h2>
+          <div class="spacer"></div>
+          <button id="btn-refresh" class="icon-btn" title="Reload preview"><svg class="icon"><use href="#i-refresh"/></svg></button>
+          <button id="btn-open" class="icon-btn" title="Open preview in a new tab"><svg class="icon"><use href="#i-external"/></svg></button>
+        </div>
+        <iframe id="preview" class="preview" title="App preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+      </div>
+
+      <div class="panel" id="cpp-console">
+        <div class="panel-head">
+          <h2>Console</h2>
+          <div class="spacer"></div>
+          <button id="btn-clear-console" class="btn btn-quiet">Clear</button>
+        </div>
+        <pre id="cpp-output" class="console-out"></pre>
+        <label class="stdin-row">
+          <span>Input (stdin)</span>
+          <textarea id="cpp-stdin" class="stdin-input" rows="2" spellcheck="false" placeholder="Sent to the program when you press Run"></textarea>
+        </label>
+      </div>
+
+      <div class="panel chat-panel">
+        <div class="panel-head">
+          <h2>Chat</h2>
+          <div class="spacer"></div>
+          <select id="model-select" class="model-select" title="Model" aria-label="Model"></select>
+        </div>
+        <div id="chat" class="chat" aria-live="polite"></div>
+        <form id="chat-form" class="chat-form">
+          <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe what to build or change"></textarea>
+          <button id="chat-send" class="btn btn-primary" type="submit">Send</button>
+        </form>
+      </div>
+    </section>
   </div>
+
+  <nav class="mobile-nav">
+    <button data-mview="files"><svg class="icon"><use href="#i-files"/></svg>Files</button>
+    <button data-mview="code"><svg class="icon"><use href="#i-code"/></svg>Code</button>
+    <button data-mview="output"><svg class="icon" id="mnav-output-icon"><use href="#i-web"/></svg><span id="mnav-output-label">Preview</span></button>
+    <button data-mview="chat"><svg class="icon"><use href="#i-chat"/></svg>Chat</button>
+  </nav>
+
+  <dialog id="key-dialog" class="dialog">
+    <form method="dialog" id="key-form">
+      <h2>Anthropic API key</h2>
+      <p class="dialog-text" id="key-intro">Chat needs an Anthropic API key. Editing and running code work without one.</p>
+      <p class="dialog-text">The key is kept in this server's memory for your session and is only sent to the Anthropic API. You can create one in the <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude Console</a>.</p>
+      <input id="api-key" class="input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..." />
+      <p id="key-error" class="form-error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" id="btn-remove-key" class="btn btn-danger-quiet" hidden>Remove key</button>
+        <div class="spacer"></div>
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="submit" id="btn-save-key" class="btn btn-primary">Save key</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ask-dialog" class="dialog">
+    <form method="dialog" id="ask-form">
+      <h2 id="ask-title"></h2>
+      <p id="ask-text" class="dialog-text" hidden></p>
+      <input id="ask-input" class="input" autocomplete="off" spellcheck="false" />
+      <div class="dialog-actions">
+        <div class="spacer"></div>
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="submit" id="ask-ok" class="btn btn-primary">OK</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
   <script src="app.js"></script>

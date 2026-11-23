@@ -1,167 +1,132 @@
-// ---------------------------------------------------------------------------
-// Anthropic Messages API client.
-//
-// Supports two auth modes:
-//   * oauth  — subscription-backed inference using the user's "Login with
-//              Claude" access token. Requires the Claude Code identity as the
-//              first system block and the oauth beta header.
-//   * apikey — a standard x-api-key call.
-// ---------------------------------------------------------------------------
+const Anthropic = require('@anthropic-ai/sdk');
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_VERSION = '2023-06-01';
-
-// Required first system block for subscription-backed (OAuth) inference.
-const CLAUDE_CODE_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
-
-const SUPPORTED_MODELS = [
-  { id: 'claude-sonnet-5', label: 'Sonnet 5 — balanced (default)' },
-  { id: 'claude-opus-4-8', label: 'Opus 4.8 — most capable' },
-  { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 — fastest' },
+const MODELS = [
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5' },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
 ];
+const DEFAULT_MODEL = MODELS.some((m) => m.id === process.env.DEFAULT_MODEL)
+  ? process.env.DEFAULT_MODEL
+  : MODELS[0].id;
 
-const BUILDER_INSTRUCTIONS = `You are the code-generation engine for Claude Studio, an in-browser app builder (like Replit's AI).
+// Opus and Sonnet can retry a safety-classifier refusal on another model
+// server-side. Haiku has no server-side fallback, so it gets no `fallbacks`.
+const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5']);
 
-Your job: given a user request and the current project files, produce a complete, working front-end web app.
+// Only the most recent turns are sent back; the current files are always
+// included in full, so older chat adds cost without adding much context.
+const MAX_HISTORY_MESSAGES = 20;
 
-Rules:
-- The app is static and runs in a sandboxed iframe. Use only HTML, CSS, and JavaScript.
-- The entry point MUST be a file named "index.html".
-- You may split code across files (e.g. index.html, style.css, script.js) and reference them by RELATIVE path.
-- You may load libraries from public CDNs via <script>/<link> tags. No build step, no server, no npm.
-- Always output the FULL, FINAL content of every file you create or change — never diffs, never "// unchanged" placeholders.
-- Only include files that changed or are new. Unchanged files can be omitted.
+const OUTPUT_FORMAT = `Reply with one to three plain sentences describing what you built or changed, then every new or changed file in this exact form:
 
-Output format — respond with a short plain-text explanation (1-3 sentences) of what you built or changed, then each file wrapped exactly like this:
-
-<file path="index.html">
-...full file contents...
-</file>
-<file path="style.css">
-...full file contents...
+<file path="relative/path.ext">
+full file contents
 </file>
 
-Do not put anything after the last </file> tag. Do not use markdown code fences around the file blocks.`;
+Always write the complete file, never a diff or a placeholder such as "rest unchanged". Leave out files that did not change. Do not wrap file blocks in markdown fences and do not write anything after the last </file>.`;
 
-const CPP_BUILDER_INSTRUCTIONS = `You are the code-generation engine for Claude Studio, an in-browser C++ IDE with a real g++ toolchain and a Run button.
+const WEB_INSTRUCTIONS = `You write code for Claude Studio, a browser IDE. The user describes a web app and you write or update its files.
 
-Your job: given a user request and the current project files, produce a complete, compiling C++ program.
+- The app is static and runs in a sandboxed iframe: HTML, CSS and JavaScript only, no server and no build step.
+- The entry point is index.html. Reference other project files by relative path.
+- Libraries may be loaded from public CDNs with <script> or <link> tags.
 
-Rules:
-- Output standard C++ (compiled with g++ -std=c++20). Use only the C++ standard library — no third-party packages, no build system.
-- The program's entry point (int main()) MUST live in a file named "main.cpp".
-- You may add extra .cpp/.hpp files and #include them by relative name; all .cpp files are compiled together.
-- If the program needs input, read it from standard input (std::cin) — the user provides stdin in the console.
-- Always output the FULL, FINAL content of every file you create or change — never diffs or "// unchanged" placeholders.
-- Only include files that changed or are new.
+${OUTPUT_FORMAT}`;
 
-Output format — respond with a short plain-text explanation (1-3 sentences) of what you built or changed, then each file wrapped exactly like this:
+const CPP_INSTRUCTIONS = `You write code for Claude Studio, a browser IDE that compiles C++ with g++ -std=c++20 and runs the program with the user's stdin. The user describes a program and you write or update its files.
 
-<file path="main.cpp">
-...full file contents...
-</file>
+- Use only the C++ standard library. There is no build system: every .cpp file in the project is compiled and linked together.
+- int main() lives in main.cpp. Headers are included by relative path.
+- Read input from std::cin. The program has a few seconds to finish and its output is capped, so avoid unbounded loops and very large output.
 
-Do not put anything after the last </file> tag. Do not use markdown code fences around the file blocks.`;
+${OUTPUT_FORMAT}`;
 
-function instructionsFor(kind) {
-  return kind === 'cpp' ? CPP_BUILDER_INSTRUCTIONS : BUILDER_INSTRUCTIONS;
+function createClient(apiKey) {
+  return new Anthropic({
+    apiKey,
+    // Unset means the real API. Setting it is only useful for testing against
+    // a local stand-in.
+    baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+  });
 }
 
-function buildSystem(mode, kind) {
-  const builder = instructionsFor(kind);
-  if (mode === 'oauth') {
-    // First block MUST be the Claude Code identity for subscription inference.
-    return [
-      { type: 'text', text: CLAUDE_CODE_IDENTITY },
-      { type: 'text', text: builder },
-    ];
-  }
-  return [{ type: 'text', text: builder }];
+// Cheap authenticated request used to check a key before saving it.
+async function verifyKey(apiKey) {
+  await createClient(apiKey).models.list({ limit: 1 });
 }
 
-function buildHeaders(auth) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'anthropic-version': ANTHROPIC_VERSION,
-  };
-  if (auth.mode === 'oauth') {
-    headers['Authorization'] = `Bearer ${auth.tokens.accessToken}`;
-    headers['anthropic-beta'] = 'oauth-2025-04-20';
-  } else {
-    headers['x-api-key'] = auth.apiKey;
-  }
-  return headers;
-}
-
-// Compose the user-facing turn: include the current files so edits are grounded.
 function buildUserTurn(project, message) {
-  const fileList = Object.entries(project.files)
+  const files = Object.entries(project.files)
     .map(([path, content]) => `<file path="${path}">\n${content}\n</file>`)
     .join('\n');
-  return `Current project files:\n${fileList || '(empty project)'}\n\n---\n\nRequest: ${message}`;
+  return `Current project files:\n${files || '(none)'}\n\nRequest: ${message}`;
 }
 
-// Stream a completion. Calls onText(chunk) for each text delta and resolves
-// with the full concatenated text. Throws { status, body } on HTTP errors.
-async function streamMessage({ auth, model, project, message, history, onText }) {
-  const messages = [];
-  for (const m of history || []) messages.push({ role: m.role, content: m.content });
+// Streams a generation. onText receives each text delta as it arrives. Resolves
+// with { text, stopReason }, where text excludes any partial output that was
+// discarded by a server-side fallback.
+async function generate({ apiKey, model, project, message, history, onText, signal }) {
+  const messages = (history || [])
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map((m) => ({
+      role: m.role,
+      content: m.files && m.files.length ? `${m.content}\n\n(Files written: ${m.files.join(', ')})` : m.content,
+    }));
   messages.push({ role: 'user', content: buildUserTurn(project, message) });
 
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: buildHeaders(auth),
-    body: JSON.stringify({
-      model,
-      max_tokens: 16000,
-      system: buildSystem(auth.mode, project.kind),
-      messages,
-      stream: true,
-    }),
-  });
-
-  if (!res.ok || !res.body) {
-    const body = await res.text().catch(() => '');
-    const err = new Error(`Anthropic API error ${res.status}`);
-    err.status = res.status;
-    err.body = body;
-    throw err;
+  const params = {
+    model,
+    max_tokens: 64000,
+    system: project.kind === 'cpp' ? CPP_INSTRUCTIONS : WEB_INSTRUCTIONS,
+    messages,
+    output_config: { effort: 'medium' },
+  };
+  if (FALLBACK_MODELS.has(model)) {
+    params.betas = ['server-side-fallback-2026-07-01'];
+    params.fallbacks = 'default';
   }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let full = '';
+  const stream = createClient(apiKey).beta.messages.stream(params, { signal });
+  stream.on('text', (delta) => onText && onText(delta));
+  const final = await stream.finalMessage();
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  // After a mid-stream fallback the declined partial stays in `content`, ahead
+  // of the last fallback block. Only the text after it is the finished answer.
+  let start = 0;
+  final.content.forEach((block, i) => { if (block.type === 'fallback') start = i + 1; });
+  const text = final.content
+    .slice(start)
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
 
-    let idx;
-    while ((idx = buffer.indexOf('\n')) !== -1) {
-      const line = buffer.slice(0, idx).trim();
-      buffer = buffer.slice(idx + 1);
-      if (!line.startsWith('data:')) continue;
-      const payload = line.slice(5).trim();
-      if (payload === '[DONE]') continue;
-      let evt;
-      try { evt = JSON.parse(payload); } catch { continue; }
-      if (evt.type === 'content_block_delta' && evt.delta && evt.delta.type === 'text_delta') {
-        full += evt.delta.text;
-        if (onText) onText(evt.delta.text);
-      } else if (evt.type === 'error') {
-        const err = new Error(evt.error && evt.error.message ? evt.error.message : 'stream error');
-        err.status = 500;
-        err.body = JSON.stringify(evt.error || {});
-        throw err;
-      }
-    }
-  }
-  return full;
+  return { text, stopReason: final.stop_reason };
 }
 
-// Parse <file path="..."> ... </file> blocks out of the model's response.
+// Turns an SDK error into a short message for the chat panel.
+function describeError(err) {
+  if (err instanceof Anthropic.AuthenticationError) {
+    return 'The API key was rejected (401). Enter a valid Anthropic API key.';
+  }
+  if (err instanceof Anthropic.PermissionDeniedError) {
+    return 'This API key does not have access to that model (403).';
+  }
+  if (err instanceof Anthropic.NotFoundError) {
+    return 'Model not found (404). Pick a different model.';
+  }
+  if (err instanceof Anthropic.RateLimitError) {
+    return 'Rate limited by the Anthropic API (429). Wait a moment and try again.';
+  }
+  if (err instanceof Anthropic.APIConnectionError) {
+    return 'Could not reach the Anthropic API. Check your network connection and try again.';
+  }
+  if (err instanceof Anthropic.APIError && err.status) {
+    const detail = err.error && err.error.error && err.error.error.message;
+    return `Anthropic API error ${err.status}${detail ? `: ${detail}` : '.'}`;
+  }
+  return 'Generation failed.';
+}
+
 function parseFiles(text) {
   const files = {};
   const re = /<file\s+path="([^"]+)">\n?([\s\S]*?)\n?<\/file>/g;
@@ -173,15 +138,21 @@ function parseFiles(text) {
   return files;
 }
 
-// The human-readable explanation is everything before the first <file> block.
+// The explanation is whatever the model wrote before the first file block.
 function parseExplanation(text) {
   const idx = text.indexOf('<file ');
   return (idx === -1 ? text : text.slice(0, idx)).trim();
 }
 
 module.exports = {
-  SUPPORTED_MODELS,
-  streamMessage,
+  MODELS,
+  DEFAULT_MODEL,
+  verifyKey,
+  generate,
+  describeError,
+  isApiError: (err) => err instanceof Anthropic.APIError,
+  isAuthError: (err) => err instanceof Anthropic.AuthenticationError,
+  isAbort: (err) => err instanceof Anthropic.APIUserAbortError,
   parseFiles,
   parseExplanation,
 };

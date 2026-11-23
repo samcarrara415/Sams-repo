@@ -1,113 +1,81 @@
-# ◆ Claude Studio
+# Claude Studio
 
-A Replit-style, in-browser **AI app builder** — describe an app in chat and Claude
-writes the code, with a live file tree, Monaco editor, and instant preview.
+A browser IDE where you describe an app in chat and Claude writes the files. There are two project types:
 
-The twist: you **log in with your own Claude subscription** (Pro / Max). The AI
-features run on *your* plan through the standard Claude OAuth flow, so there's no
-shared API key to provision or pay for. (An Anthropic API key is also supported
-as a fallback.)
+- **Web app**: HTML, CSS and JavaScript, shown in a sandboxed preview that reloads as files change.
+- **C++ program**: the server compiles the project with g++ and runs it with the input you provide.
 
-![layout: sidebar · editor · preview + chat](https://img.shields.io/badge/layout-files%20%C2%B7%20editor%20%C2%B7%20preview%20%2B%20chat-2a313c)
+Each project has a file list, tabbed editor (Monaco, or a plain text editor on touch devices or when the Monaco CDN can't be reached), autosave and a chat history. Follow-up messages edit the current project; Claude sees every file on each turn. The layout switches to a bottom tab bar on phones, and the app can be installed as a PWA.
 
-## Features
+This is an independent project and is not affiliated with Anthropic.
 
-- **Log in with Claude** — PKCE OAuth (the same flow Claude Code's `setup-token`
-  uses). Subscription-backed inference via the `user:inference` scope. Tokens are
-  refreshed automatically; nothing is billed to a central API key.
-- **AI app creation** — chat a prompt, Claude scaffolds a complete multi-file
-  project. Follow-up prompts edit the existing project with full file context.
-  Streaming responses.
-- **Two project types**
-  - **Web app** — HTML/CSS/JS rendered live in a sandboxed preview iframe.
-  - **C++ program** — a real IDE with a **Run button**: the server compiles your
-    sources with `g++ -std=c++20` and runs the binary, with a stdin box and a
-    console for stdout/stderr, compiler errors, exit codes, and a run timeout.
-    (This is the "plain C++ IDE with a Run button" that Replit removed.)
-- **IDE** — projects list, file tree, code editor (Monaco, with a plain-textarea
-  fallback if the editor CDN is unavailable), tabs, autosave.
-- **Works on mobile** — responsive layout that collapses to a bottom tab bar
-  (Files · Code · Run/Preview · Chat) on phones and tablets.
-- **No-login editing** — the editor and the C++ Run button work without signing
-  in; a Claude login is only needed for the AI generation features.
-- **Installable (PWA)** — "Add to Home Screen" and Claude Studio launches
-  standalone with its own icon, like a native app. A service worker caches the
-  app shell for instant, offline-capable startup (dynamic requests — auth, AI
-  chat, C++ run, previews — always go to the network).
+## Requirements
 
-## Quick start
+- Node.js 20.12 or newer
+- g++ with C++20 support, for C++ projects (`sudo apt install g++`, or Xcode Command Line Tools on macOS)
+- An Anthropic API key, for chat. Editing and running code work without one.
+
+## Setup
 
 ```bash
 cd claude-studio
 npm install
-cp .env.example .env        # set SESSION_SECRET
-npm start                   # http://localhost:3000
+npm start
 ```
 
-Open the app and choose **Log in with Claude**:
+Open http://localhost:3000. Click **Add API key** and paste a key from the [Claude Console](https://platform.claude.com/). The server checks the key with a single request to the Models API, then keeps it in your in-memory session. It is never sent back to the browser or written to disk or logs, and it is forgotten when the server restarts.
 
-1. Click **Authorize with Claude** — a Claude tab opens.
-2. Approve access. Claude shows you an authorization code.
-3. Paste it back and **Connect subscription**.
+For a single-user, self-hosted setup you can set the key on the server instead, and nobody will be asked for one:
 
-Then type what you want to build (e.g. *"a pomodoro timer with a circular progress
-ring"*) and watch it appear in the preview.
-
-> No subscription? Switch to the **Use API key** tab and paste an `sk-ant-…` key.
-
-## Install it as an app (PWA)
-
-Claude Studio is a Progressive Web App, so you can pin it to your phone or
-desktop and it runs full-screen like a native app:
-
-- **iOS (Safari):** Share → *Add to Home Screen*.
-- **Android (Chrome):** ⋮ menu → *Install app* / *Add to Home screen*.
-- **Desktop (Chrome/Edge):** the install icon in the address bar.
-
-> Browsers only offer install over **HTTPS** (or on `localhost` for testing).
-> To install from a phone, run the server behind HTTPS — e.g. put it behind a
-> TLS-terminating reverse proxy, or expose it with a tunnel like
-> `cloudflared` / `ngrok` — then open that `https://…` URL and install.
-
-## How the Claude login works
-
-`lib/oauth.js` implements authorization-code + PKCE against Claude's OAuth
-endpoints using the public Claude Code OAuth client. The returned access token is
-used to call the Anthropic Messages API with the `anthropic-beta: oauth-2025-04-20`
-header, which routes inference to the logged-in user's subscription. All OAuth
-parameters are overridable via environment variables — see `.env.example`.
-
-## Architecture
-
-```
-server.js            Express app: auth, projects, AI chat (SSE), C++ run, preview
-lib/oauth.js         Claude "Login with Claude" PKCE flow + token refresh
-lib/anthropic.js     Messages API client (oauth + api-key), file-block parsing
-lib/runner.js        Real g++ compile-and-run with timeouts and output caps
-lib/sessions.js      In-memory session / PKCE / project stores
-public/              IDE front-end (Monaco via CDN + textarea fallback, no build)
+```bash
+cp .env.example .env    # then set ANTHROPIC_API_KEY
+npm start
 ```
 
-### The C++ Run button
+Anyone who can reach the server uses that key, so only do this on a machine you control. `.env.example` lists the other settings (port, host, default model).
 
-Requires `g++` on the host (`sudo apt-get install g++` / part of `build-essential`).
-When you press **Run**, `lib/runner.js` writes the project's `.cpp`/header files to a
-temp directory, compiles them together, then executes the binary — feeding your
-stdin box to the program. Compilation is capped at 15s, execution at 8s, and each
-output stream at 256 KB, so runaway programs are killed cleanly.
+## How generation works
 
-> Server-side execution note: the runner compiles and runs untrusted code on the
-> host with time/output limits but **no OS-level sandbox**. Run it locally or in a
-> disposable container; don't expose this endpoint on a shared/production host
-> without adding real isolation (containers, seccomp, resource cgroups).
+Each chat message is sent to the Messages API with the full contents of the project and the recent chat history. The system prompt asks Claude to reply with a short explanation followed by complete files in `<file path="...">` blocks. The server streams the reply to the browser, then writes the returned files into the project. Files that aren't mentioned are left alone.
 
-Sessions and projects are held in memory, keyed by a signed cookie — swap the Maps
-in `lib/sessions.js` for a database to persist projects or run multiple instances.
+Models: Claude Opus 5.5 (default), Claude Sonnet 5.5 and Claude Haiku 5.5, selectable in the chat panel. Requests stream with a 64,000 token output limit. For Opus and Sonnet, the request opts into server-side fallback, so a request declined by a safety classifier is retried on the model Anthropic recommends instead of failing. API errors (rejected key, rate limit, network failure) are shown in the chat as plain messages.
 
-## Notes & limits
+## How C++ runs
 
-- Generated apps are **static** (HTML/CSS/JS, CDN libraries allowed) and run in a
-  sandboxed iframe — no server-side code or npm build step.
-- This is a demo-grade build: single node, in-memory storage, no rate limiting.
-- Respect Anthropic's usage policies and your plan's terms when using
-  subscription-backed inference.
+Pressing **Run** (or Ctrl+Enter in the editor) saves pending edits, then `lib/runner.js`:
+
+1. creates a fresh temp directory and writes the project's `.cpp` and header files into it, keeping subfolders,
+2. compiles every `.cpp` file with `g++ -std=c++20 -O2` (15 second limit),
+3. runs the binary with the stdin box as input (5 second limit, 64 KB combined output limit),
+4. kills the program's whole process group if it hits a limit, and deletes the temp directory.
+
+The console shows compiler errors, program output, the exit code, or the signal that ended the program (for example a segmentation fault). At most four programs run at once.
+
+## Security
+
+**The C++ runner is not a sandbox.** Programs run as the same user as the server, with that user's access to files and the network. The time and output limits stop runaway programs; they don't stop malicious ones. Run Claude Studio on your own machine or a disposable VM or container, not on a shared or public server.
+
+The server listens on 127.0.0.1 by default for this reason. Set `HOST=0.0.0.0` only on a network you trust. If you put it on the internet, put real isolation around the runner (a container per run, seccomp, cgroup limits) and authentication in front of the app.
+
+Web app previews are served with a `Content-Security-Policy: sandbox` header and loaded in a sandboxed iframe, so generated code runs in an opaque origin and can't call the Claude Studio API with your session, even when the preview is opened in its own tab.
+
+## Limits
+
+- Sessions and projects are kept in memory and are lost when the server restarts. Idle sessions are removed after 7 days.
+- Web apps are static files only: no server code, no npm packages or build step. Libraries can be loaded from a CDN.
+- C++ projects can use the standard library only, with no build system.
+- One server process; there is no rate limiting or user accounts.
+
+## Project layout
+
+```
+server.js          Express app: settings, projects, files, chat (SSE), C++ run, preview
+lib/anthropic.js   Anthropic SDK calls, prompts, error messages, file-block parsing
+lib/runner.js      g++ compile and run with limits and cleanup
+lib/sessions.js    In-memory sessions and projects, file path validation
+public/            Front end (no build step): index.html, app.js, styles.css, service worker
+```
+
+## Testing without an API key
+
+`ANTHROPIC_BASE_URL` points the Anthropic client at a different server. Running a small local server that speaks the Messages API streaming format and starting Claude Studio with `ANTHROPIC_BASE_URL=http://127.0.0.1:<port>` lets you exercise the chat flow, including error cases, without calling the real API.

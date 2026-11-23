@@ -1,30 +1,36 @@
-// ---------------------------------------------------------------------------
-// Claude Studio — a Replit-style AI app builder powered by your own Claude
-// subscription (via "Login with Claude" OAuth) or an Anthropic API key.
-// ---------------------------------------------------------------------------
-
+const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
+
+const envFile = path.join(__dirname, '.env');
+if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
-const oauth = require('./lib/oauth');
 const store = require('./lib/sessions');
 const anthropic = require('./lib/anthropic');
 const runner = require('./lib/runner');
 
-const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-insecure-secret-change-me';
+const PORT = Number(process.env.PORT) || 3000;
+// The C++ runner executes arbitrary code, so listen on loopback unless told otherwise.
+const HOST = process.env.HOST || '127.0.0.1';
+// Sessions are in memory, so a per-process secret loses nothing on restart.
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const SERVER_API_KEY = process.env.ANTHROPIC_API_KEY || null;
+const MAX_CONCURRENT_RUNS = 4;
 
 const app = express();
+app.disable('x-powered-by');
 app.use(express.json({ limit: '4mb' }));
 app.use(cookieParser(SESSION_SECRET));
 
-// Attach (or lazily create) a session for every request.
-app.use((req, res, next) => {
-  let sid = req.signedCookies && req.signedCookies.sid;
-  let session = store.getSession(sid);
+const api = express.Router();
+
+api.use((req, res, next) => {
+  let session = store.getSession(req.signedCookies.sid);
   if (!session) {
-    session = store.createSession();
+    session = store.createSession(anthropic.DEFAULT_MODEL);
     res.cookie('sid', session.sid, {
       httpOnly: true,
       sameSite: 'lax',
@@ -36,175 +42,164 @@ app.use((req, res, next) => {
   next();
 });
 
-// If a server-wide API key is configured, treat unauthenticated sessions as
-// authenticated with it (handy for local dev).
-app.use((req, res, next) => {
-  if (!req.session.auth && process.env.ANTHROPIC_API_KEY) {
-    req.session.auth = { mode: 'apikey', apiKey: process.env.ANTHROPIC_API_KEY, serverDefault: true };
-  }
-  next();
-});
+function apiKeyFor(session) {
+  return session.apiKey || SERVER_API_KEY;
+}
 
-function requireAuth(req, res, next) {
-  if (!store.isAuthed(req.session)) {
-    return res.status(401).json({ error: 'Not authenticated. Log in with Claude first.' });
-  }
+function loadProject(req, res, next) {
+  const project = req.session.projects.get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found.' });
+  req.project = project;
   next();
 }
 
-// Ensure a live OAuth token before an inference call; refresh if near expiry.
-async function ensureFreshToken(session) {
-  const auth = session.auth;
-  if (!auth || auth.mode !== 'oauth') return;
-  if (auth.tokens.expiresAt && auth.tokens.expiresAt > Date.now()) return;
-  if (!auth.tokens.refreshToken) return; // nothing to do; call may 401 and prompt re-login
-  const refreshed = await oauth.refreshToken(auth.tokens.refreshToken);
-  auth.tokens = refreshed;
+function projectSummary(p) {
+  return { id: p.id, name: p.name, kind: p.kind, updatedAt: p.updatedAt };
 }
 
-// --- Auth API --------------------------------------------------------------
+function projectDetail(p) {
+  return { ...projectSummary(p), files: p.files, messages: p.messages };
+}
 
-app.get('/api/auth/status', (req, res) => {
-  const authed = store.isAuthed(req.session);
+// --- Settings and API key ---------------------------------------------------
+// The key stays in the server-side session. Responses only say whether one is set.
+
+api.get('/settings', (req, res) => {
   res.json({
-    authed,
-    mode: authed ? req.session.auth.mode : null,
-    serverDefault: authed ? !!req.session.auth.serverDefault : false,
+    hasKey: !!req.session.apiKey,
+    serverKey: !!SERVER_API_KEY,
     model: req.session.model,
-    models: anthropic.SUPPORTED_MODELS,
+    models: anthropic.MODELS,
   });
 });
 
-// Step 1: begin the "Login with Claude" flow. Returns a URL the user opens.
-app.post('/api/auth/claude/start', (req, res) => {
-  const { verifier, challenge, state } = oauth.createPkce();
-  store.stashPkce(state, verifier);
-  const authUrl = oauth.buildAuthorizeUrl({ challenge, state });
-  res.json({ authUrl });
-});
-
-// Step 2: the user pastes the code shown after authorizing.
-app.post('/api/auth/claude/finish', async (req, res) => {
+api.post('/settings/key', async (req, res) => {
+  const apiKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : '';
+  if (!/^sk-ant-\S+$/.test(apiKey)) {
+    return res.status(400).json({ error: 'Anthropic API keys start with "sk-ant-".' });
+  }
   try {
-    const { code: pasted } = req.body || {};
-    if (!pasted) return res.status(400).json({ error: 'Missing authorization code.' });
-    const { code, state } = oauth.parsePastedCode(pasted);
-    if (!code) return res.status(400).json({ error: 'Could not parse the authorization code.' });
-    const verifier = store.takePkce(state);
-    if (!verifier) {
-      return res.status(400).json({ error: 'Login session expired or state mismatch. Please start again.' });
-    }
-    const tokens = await oauth.exchangeCode({ code, state, verifier });
-    req.session.auth = { mode: 'oauth', tokens };
-    res.json({ ok: true, mode: 'oauth' });
+    await anthropic.verifyKey(apiKey);
   } catch (err) {
-    res.status(400).json({ error: err.message || 'Login failed.' });
+    return res.status(err.status === 401 ? 401 : 502).json({ error: anthropic.describeError(err) });
   }
-});
-
-// Alternative: authenticate with an Anthropic API key.
-app.post('/api/auth/apikey', (req, res) => {
-  const { apiKey } = req.body || {};
-  if (!apiKey || !/^sk-/.test(apiKey.trim())) {
-    return res.status(400).json({ error: 'That does not look like an Anthropic API key.' });
-  }
-  req.session.auth = { mode: 'apikey', apiKey: apiKey.trim() };
-  res.json({ ok: true, mode: 'apikey' });
-});
-
-app.post('/api/auth/logout', (req, res) => {
-  req.session.auth = null;
+  req.session.apiKey = apiKey;
   res.json({ ok: true });
 });
 
-app.post('/api/settings/model', (req, res) => {
-  const { model } = req.body || {};
-  const ok = anthropic.SUPPORTED_MODELS.some((m) => m.id === model);
-  if (!ok) return res.status(400).json({ error: 'Unknown model.' });
+api.delete('/settings/key', (req, res) => {
+  req.session.apiKey = null;
+  res.json({ ok: true });
+});
+
+api.post('/settings/model', (req, res) => {
+  const { model } = req.body;
+  if (!anthropic.MODELS.some((m) => m.id === model)) {
+    return res.status(400).json({ error: 'Unknown model.' });
+  }
   req.session.model = model;
-  res.json({ ok: true, model });
+  res.json({ ok: true });
 });
 
-// --- Projects API ----------------------------------------------------------
+// --- Projects ---------------------------------------------------------------
+// Editing and running work without a key; only chat needs one.
 
-// Note: the IDE (projects, editing, running) works without logging in — only
-// the AI chat endpoint requires authentication. This keeps the plain C++ /
-// web editor usable as a "normal IDE with a Run button".
-app.get('/api/projects', (req, res) => {
-  const list = [...req.session.projects.values()]
+api.get('/projects', (req, res) => {
+  const projects = [...req.session.projects.values()]
     .sort((a, b) => b.updatedAt - a.updatedAt)
-    .map(store.summarizeProject);
-  res.json({ projects: list });
+    .map(projectSummary);
+  res.json({ projects });
 });
 
-app.post('/api/projects', (req, res) => {
-  const { name, kind } = req.body || {};
-  const project = store.createProject(req.session, { name, kind });
-  res.json({ project: fullProject(project) });
+api.post('/projects', (req, res) => {
+  const project = store.createProject(req.session, { kind: req.body.kind });
+  res.json({ project: projectDetail(project) });
 });
 
-app.get('/api/projects/:id', (req, res) => {
-  const project = req.session.projects.get(req.params.id);
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
-  res.json({ project: fullProject(project) });
+api.get('/projects/:id', loadProject, (req, res) => {
+  res.json({ project: projectDetail(req.project) });
 });
 
-// Save a single file's contents (manual editor edits).
-app.put('/api/projects/:id/file', (req, res) => {
-  const project = req.session.projects.get(req.params.id);
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
-  const { path: filePath, content } = req.body || {};
-  if (!filePath || typeof content !== 'string') {
-    return res.status(400).json({ error: 'path and content are required.' });
-  }
-  project.files[filePath] = content;
-  project.updatedAt = Date.now();
+api.patch('/projects/:id', loadProject, (req, res) => {
+  const name = typeof req.body.name === 'string' ? req.body.name.trim().slice(0, 80) : '';
+  if (!name) return res.status(400).json({ error: 'Name cannot be empty.' });
+  req.project.name = name;
+  req.project.updatedAt = Date.now();
+  res.json({ project: projectSummary(req.project) });
+});
+
+api.delete('/projects/:id', loadProject, (req, res) => {
+  store.deleteProject(req.session, req.project.id);
   res.json({ ok: true });
 });
 
-app.delete('/api/projects/:id/file', (req, res) => {
-  const project = req.session.projects.get(req.params.id);
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
-  const { path: filePath } = req.body || {};
-  if (filePath && project.files[filePath]) {
-    delete project.files[filePath];
-    project.updatedAt = Date.now();
+api.put('/projects/:id/files', loadProject, (req, res) => {
+  const filePath = store.normalizePath(req.body.path);
+  const { content } = req.body;
+  if (!filePath) return res.status(400).json({ error: 'Invalid file name.' });
+  if (typeof content !== 'string') return res.status(400).json({ error: 'File content must be text.' });
+  req.project.files[filePath] = content;
+  req.project.updatedAt = Date.now();
+  res.json({ ok: true, path: filePath });
+});
+
+api.post('/projects/:id/files/rename', loadProject, (req, res) => {
+  const { files } = req.project;
+  const from = req.body.from;
+  const to = store.normalizePath(req.body.to);
+  if (typeof from !== 'string' || !Object.hasOwn(files, from)) {
+    return res.status(404).json({ error: 'File not found.' });
+  }
+  if (!to) return res.status(400).json({ error: 'Invalid file name.' });
+  if (to !== from && Object.hasOwn(files, to)) {
+    return res.status(409).json({ error: `${to} already exists.` });
+  }
+  const content = files[from];
+  delete files[from];
+  files[to] = content;
+  req.project.updatedAt = Date.now();
+  res.json({ ok: true, path: to });
+});
+
+api.delete('/projects/:id/files', loadProject, (req, res) => {
+  const filePath = req.body.path;
+  if (typeof filePath === 'string' && Object.hasOwn(req.project.files, filePath)) {
+    delete req.project.files[filePath];
+    req.project.updatedAt = Date.now();
   }
   res.json({ ok: true });
 });
 
-function fullProject(project) {
-  return {
-    id: project.id,
-    name: project.name,
-    kind: project.kind || 'web',
-    files: project.files,
-    messages: project.messages,
-    updatedAt: project.updatedAt,
-  };
-}
+// --- Run C++ ----------------------------------------------------------------
 
-// --- Run C++ (real g++ compile + execute) ----------------------------------
+let activeRuns = 0;
 
-app.post('/api/projects/:id/run', async (req, res) => {
-  const project = req.session.projects.get(req.params.id);
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
-  const stdin = req.body && typeof req.body.stdin === 'string' ? req.body.stdin : '';
+api.post('/projects/:id/run', loadProject, async (req, res) => {
+  if (req.project.kind !== 'cpp') return res.status(400).json({ error: 'Only C++ projects can be run.' });
+  if (activeRuns >= MAX_CONCURRENT_RUNS) {
+    return res.status(429).json({ error: 'Too many programs running. Try again in a few seconds.' });
+  }
+  const stdin = typeof req.body.stdin === 'string' ? req.body.stdin : '';
+  activeRuns++;
   try {
-    const result = await runner.compileAndRunCpp(project.files, stdin);
-    res.json(result);
+    res.json(await runner.compileAndRunCpp(req.project.files, stdin));
   } catch (err) {
-    res.status(500).json({ ok: false, stage: 'run', stderr: err.message || 'Run failed.' });
+    console.error('C++ run failed:', err);
+    res.status(500).json({ error: 'The run failed on the server.' });
+  } finally {
+    activeRuns--;
   }
 });
 
-// --- AI chat (Server-Sent Events) -----------------------------------------
+// --- Chat (Server-Sent Events) ----------------------------------------------
 
-app.post('/api/projects/:id/chat', requireAuth, async (req, res) => {
-  const project = req.session.projects.get(req.params.id);
-  if (!project) return res.status(404).json({ error: 'Project not found.' });
-  const message = (req.body && req.body.message ? String(req.body.message) : '').trim();
-  if (!message) return res.status(400).json({ error: 'Empty message.' });
+api.post('/projects/:id/chat', loadProject, async (req, res) => {
+  const { project, session } = req;
+  const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
+  if (!message) return res.status(400).json({ error: 'Message is empty.' });
+  const apiKey = apiKeyFor(session);
+  const usingServerKey = !session.apiKey;
+  if (!apiKey) return res.status(401).json({ error: 'Add an Anthropic API key to use chat.', needsKey: true });
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -213,85 +208,97 @@ app.post('/api/projects/:id/chat', requireAuth, async (req, res) => {
   });
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
-  try {
-    await ensureFreshToken(req.session);
+  // Stop paying for tokens if the browser goes away mid-generation.
+  const abort = new AbortController();
+  res.on('close', () => abort.abort());
 
-    const full = await anthropic.streamMessage({
-      auth: req.session.auth,
-      model: req.session.model,
+  try {
+    const { text, stopReason } = await anthropic.generate({
+      apiKey,
+      model: session.model,
       project,
       message,
       history: project.messages,
       onText: (chunk) => send('delta', { text: chunk }),
+      signal: abort.signal,
     });
 
-    const explanation = anthropic.parseExplanation(full);
-    const changed = anthropic.parseFiles(full);
-    const changedPaths = Object.keys(changed);
+    if (stopReason === 'refusal') {
+      send('error', { error: 'Claude declined this request. Try rephrasing it.' });
+      return;
+    }
 
-    // Apply file changes.
-    for (const [p, content] of Object.entries(changed)) project.files[p] = content;
+    const changed = {};
+    for (const [rawPath, content] of Object.entries(anthropic.parseFiles(text))) {
+      const p = store.normalizePath(rawPath);
+      if (p) changed[p] = content;
+    }
+    const changedPaths = Object.keys(changed);
+    Object.assign(project.files, changed);
+
+    let explanation = anthropic.parseExplanation(text)
+      || (changedPaths.length ? 'Updated the project.' : 'No changes.');
+    if (stopReason === 'max_tokens') {
+      explanation += '\n\nThe response hit the length limit, so the last file may be missing. Ask for the rest to continue.';
+    }
+
+    // Store the conversation without the file dumps; the current files are
+    // sent in full with every request anyway.
+    project.messages.push({ role: 'user', content: message });
+    project.messages.push({ role: 'assistant', content: explanation, files: changedPaths });
     project.updatedAt = Date.now();
 
-    // Keep chat history compact: store the conversation, not the file dumps
-    // (current files are always re-sent to the model on each turn).
-    project.messages.push({ role: 'user', content: message });
-    project.messages.push({
-      role: 'assistant',
-      content: explanation + (changedPaths.length ? `\n\n(updated files: ${changedPaths.join(', ')})` : ''),
-    });
-
-    send('done', {
-      explanation,
-      changedFiles: changedPaths,
-      files: project.files,
-    });
+    send('done', { explanation, changedFiles: changedPaths, files: project.files });
   } catch (err) {
-    let msg = err.message || 'Generation failed.';
-    if (err.status === 401) {
-      const wasOauth = req.session.auth && req.session.auth.mode === 'oauth';
-      req.session.auth = null;
-      msg = wasOauth
-        ? 'Your Claude login expired or was rejected. Please log in again.'
-        : 'Your Anthropic API key was rejected. Please re-enter it.';
-    } else if (err.body) {
-      msg += ` — ${String(err.body).slice(0, 300)}`;
-    }
-    send('error', { error: msg });
+    if (anthropic.isAbort(err)) return;
+    if (!anthropic.isApiError(err)) console.error('Chat failed:', err);
+    const keyRejected = anthropic.isAuthError(err);
+    let error = anthropic.describeError(err);
+    if (keyRejected && usingServerKey) error = 'The server\'s ANTHROPIC_API_KEY was rejected (401).';
+    else if (keyRejected) session.apiKey = null;
+    send('error', { error, needsKey: keyRejected && !usingServerKey });
   } finally {
     res.end();
   }
 });
 
-// --- Live preview ----------------------------------------------------------
+api.use((req, res) => res.status(404).json({ error: 'Not found.' }));
+
+app.use('/api', api);
+
+// --- Preview ----------------------------------------------------------------
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/plain; charset=utf-8',
 };
 
 app.get('/preview/:id/*', (req, res) => {
   const project = store.getProjectById(req.params.id);
-  if (!project) return res.status(404).send('Project not found');
+  if (!project) return res.status(404).type('text/plain').send('Project not found.');
   let filePath = req.params[0] || 'index.html';
-  if (filePath === '' || filePath.endsWith('/')) filePath += 'index.html';
-  const content = project.files[filePath];
-  if (content === undefined) return res.status(404).send('Not found: ' + filePath);
-  const ext = path.extname(filePath).toLowerCase();
-  res.type(MIME[ext] || 'application/octet-stream');
-  res.send(content);
+  if (filePath.endsWith('/')) filePath += 'index.html';
+  if (!Object.hasOwn(project.files, filePath)) {
+    return res.status(404).type('text/plain').send(`File not found: ${filePath}`);
+  }
+  // Keep generated code sandboxed even when the preview is opened in its own tab.
+  res.set('Content-Security-Policy', 'sandbox allow-scripts allow-forms allow-modals allow-popups');
+  res.set('Cache-Control', 'no-store');
+  res.type(MIME[path.extname(filePath).toLowerCase()] || 'text/plain; charset=utf-8');
+  res.send(project.files[filePath]);
 });
-// Bare /preview/:id → index.html
-app.get('/preview/:id', (req, res) => res.redirect(`/preview/${req.params.id}/index.html`));
-
-// --- Static frontend -------------------------------------------------------
+app.get('/preview/:id', (req, res) => res.redirect(`/preview/${req.params.id}/`));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Claude Studio running at http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Claude Studio listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  if (!SERVER_API_KEY) console.log('No ANTHROPIC_API_KEY set; users will be asked for their own key.');
 });

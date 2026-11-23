@@ -2,13 +2,16 @@
   "name": "claude-studio",
   "version": "1.0.0",
   "private": true,
-  "description": "A Replit-style AI app builder that logs in with your Claude subscription to power the AI features.",
+  "description": "Describe a web app or C++ program and Claude writes it. Browser IDE with live preview and a g++ runner.",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0",
     "cookie-parser": "^1.4.7",
-    "express": "^4.21.0"
+    "express": "^4.22.3"
+  },
+  "engines": {
+    "node": ">=20.12"
   }
 }
