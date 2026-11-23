@@ -4,265 +4,187 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resume Remaster</title>
+  <meta name="description" content="Rewrite your resume for a specific role with Claude. Upload a PDF or DOCX, pick a job, get a tailored version." />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <header>
-    <h1>Resume <span>Remaster</span></h1>
-    <p>Upload your resume, pick a target role, and let AI rewrite it to land the interview.</p>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4Zm0 0v4h4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="1.75"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <header class="site-header">
+    <div class="wrap">
+      <h1>Resume Remaster</h1>
+      <p>Upload your resume, pick the job you want, and Claude rewrites it for that role.</p>
+    </div>
   </header>
 
-  <main>
+  <main class="wrap">
 
-    <!-- Step 1: Mode selector -->
-    <div class="card">
-      <div class="card-header">
-        <div class="step-badge">1</div>
-        <h2>How do you want to run it?</h2>
+    <section class="step">
+      <h2><span class="step-num">1</span> Resume</h2>
+      <label class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".pdf,.docx" />
+        <svg class="icon icon-lg"><use href="#i-upload"/></svg>
+        <span class="drop-title">Choose a file or drop it here</span>
+        <span class="drop-hint">PDF or DOCX with selectable text</span>
+      </label>
+      <div class="file-row" id="file-info" hidden>
+        <svg class="icon"><use href="#i-file"/></svg>
+        <span class="file-name" id="file-name"></span>
+        <span class="file-size" id="file-size"></span>
+        <button type="button" class="icon-btn" id="remove-file" aria-label="Remove file">
+          <svg class="icon"><use href="#i-x"/></svg>
+        </button>
       </div>
-      <div class="card-body">
-        <div class="mode-toggle">
-          <label class="mode-option" id="mode-subscription-label">
-            <input type="radio" name="mode" value="subscription" id="mode-subscription" checked />
-            <div class="mode-box">
-              <span class="mode-icon">⭐</span>
-              <div>
-                <div class="mode-title">Claude.ai Subscription</div>
-                <div class="mode-desc">Builds a prompt &amp; opens Claude.ai — use your existing Pro or free plan</div>
-              </div>
-            </div>
-          </label>
-          <label class="mode-option" id="mode-api-label">
-            <input type="radio" name="mode" value="api" id="mode-api" />
-            <div class="mode-box">
-              <span class="mode-icon">🔑</span>
-              <div>
-                <div class="mode-title">Anthropic API Key</div>
-                <div class="mode-desc">Calls the API directly and shows the result on this page</div>
-              </div>
-            </div>
-          </label>
-        </div>
+    </section>
 
-        <!-- API key input — only shown in API mode -->
-        <div id="api-key-section" style="display:none; margin-top:16px">
-          <div class="api-key-wrapper">
-            <input
-              type="password"
-              id="api-key"
-              placeholder="sk-ant-api03-..."
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <span class="key-status" id="key-status"></span>
-          </div>
-          <p class="api-key-note">
-            Your key is saved only in your browser and sent directly to Anthropic.
-            Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
-          </p>
-        </div>
+    <section class="step">
+      <h2><span class="step-num">2</span> Target role</h2>
+      <div class="job-grid" role="radiogroup" aria-label="Common roles">
+        <label class="chip"><input type="radio" name="job" value="Software Engineer" /><span>Software Engineer</span></label>
+        <label class="chip"><input type="radio" name="job" value="Data Scientist" /><span>Data Scientist</span></label>
+        <label class="chip"><input type="radio" name="job" value="Product Manager" /><span>Product Manager</span></label>
+        <label class="chip"><input type="radio" name="job" value="DevOps / Cloud Engineer" /><span>DevOps / Cloud Engineer</span></label>
+        <label class="chip"><input type="radio" name="job" value="UX / UI Designer" /><span>UX / UI Designer</span></label>
+        <label class="chip"><input type="radio" name="job" value="Marketing Manager" /><span>Marketing Manager</span></label>
+        <label class="chip"><input type="radio" name="job" value="Financial Analyst" /><span>Financial Analyst</span></label>
+        <label class="chip"><input type="radio" name="job" value="Sales Representative" /><span>Sales Representative</span></label>
       </div>
-    </div>
 
-    <!-- Step 2: Upload -->
-    <div class="card">
-      <div class="card-header">
-        <div class="step-badge">2</div>
-        <h2>Upload Your Resume</h2>
+      <label class="field-label" for="more-jobs">Other roles</label>
+      <select id="more-jobs">
+        <option value="">Choose a role</option>
+        <optgroup label="Tech">
+          <option>Frontend Developer</option>
+          <option>Backend Developer</option>
+          <option>Full Stack Developer</option>
+          <option>Mobile Developer</option>
+          <option>Machine Learning Engineer</option>
+          <option>Data Analyst</option>
+          <option>Cybersecurity Analyst</option>
+          <option>Solutions Architect</option>
+          <option>QA Engineer</option>
+          <option>Site Reliability Engineer</option>
+        </optgroup>
+        <optgroup label="Business">
+          <option>Business Analyst</option>
+          <option>Project Manager</option>
+          <option>Operations Manager</option>
+          <option>Management Consultant</option>
+          <option>Supply Chain Analyst</option>
+        </optgroup>
+        <optgroup label="Creative and design">
+          <option>Graphic Designer</option>
+          <option>Content Writer</option>
+          <option>Brand Strategist</option>
+          <option>Social Media Manager</option>
+        </optgroup>
+        <optgroup label="Finance and legal">
+          <option>Investment Banker</option>
+          <option>Accountant</option>
+          <option>Compliance Analyst</option>
+          <option>Paralegal</option>
+        </optgroup>
+        <optgroup label="People and admin">
+          <option>Human Resources Manager</option>
+          <option>Recruiter</option>
+          <option>Executive Assistant</option>
+          <option>Customer Success Manager</option>
+        </optgroup>
+      </select>
+    </section>
+
+    <section class="step">
+      <h2><span class="step-num">3</span> Notes <span class="muted">optional</span></h2>
+      <textarea id="notes" rows="3" placeholder="For example: keep it to one page, lead with my Python work"></textarea>
+    </section>
+
+    <section class="step">
+      <h2><span class="step-num">4</span> How to run it</h2>
+      <div class="mode-list">
+        <label class="mode">
+          <input type="radio" name="mode" value="prompt" id="mode-prompt" checked />
+          <span>
+            <span class="mode-title">Paste into Claude.ai</span>
+            <span class="mode-desc">Builds the prompt here. You copy it into your own Claude.ai chat (free or paid plan). No key needed.</span>
+          </span>
+        </label>
+        <label class="mode">
+          <input type="radio" name="mode" value="api" id="mode-api" />
+          <span>
+            <span class="mode-title">Use an Anthropic API key</span>
+            <span class="mode-desc">Calls the Anthropic API from this page and shows the result here. Billed to your API account.</span>
+          </span>
+        </label>
       </div>
-      <div class="card-body">
-        <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept=".pdf,.docx" />
-          <div class="drop-icon">📄</div>
-          <h3>Drop your resume here</h3>
-          <p>or click to browse files</p>
-          <div class="file-badges">
-            <span class="badge">PDF</span>
-            <span class="badge">DOCX</span>
-          </div>
-        </div>
 
-        <div class="file-selected" id="file-info" style="display:none">
-          <span class="file-icon">📎</span>
-          <span class="file-name" id="file-name"></span>
-          <span class="file-size" id="file-size"></span>
-          <button class="btn-remove" id="remove-file" title="Remove file">✕</button>
-        </div>
+      <div class="api-key" id="api-key-section" hidden>
+        <label class="field-label" for="api-key">API key</label>
+        <input type="password" id="api-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
+        <label class="checkbox">
+          <input type="checkbox" id="remember-key" />
+          Remember on this device
+        </label>
+        <p class="hint">
+          The key goes straight from your browser to api.anthropic.com. If you tick the box it is kept in this browser's local storage.
+          Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
+        </p>
       </div>
-    </div>
+    </section>
 
-    <!-- Step 3: Job Type -->
-    <div class="card">
-      <div class="card-header">
-        <div class="step-badge">3</div>
-        <h2>Target Job Type</h2>
-      </div>
-      <div class="card-body">
-        <div class="job-grid">
+    <p class="error" id="error-box" role="alert" hidden></p>
 
-          <div class="job-option">
-            <input type="radio" name="job" id="job-swe" value="Software Engineer" />
-            <label for="job-swe"><span class="job-icon">💻</span> Software Engineer</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-data" value="Data Scientist" />
-            <label for="job-data"><span class="job-icon">📊</span> Data Scientist</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-pm" value="Product Manager" />
-            <label for="job-pm"><span class="job-icon">🗂️</span> Product Manager</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-devops" value="DevOps / Cloud Engineer" />
-            <label for="job-devops"><span class="job-icon">☁️</span> DevOps / Cloud Engineer</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-ux" value="UX / UI Designer" />
-            <label for="job-ux"><span class="job-icon">🎨</span> UX / UI Designer</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-marketing" value="Marketing Manager" />
-            <label for="job-marketing"><span class="job-icon">📣</span> Marketing Manager</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-finance" value="Financial Analyst" />
-            <label for="job-finance"><span class="job-icon">💰</span> Financial Analyst</label>
-          </div>
-
-          <div class="job-option">
-            <input type="radio" name="job" id="job-sales" value="Sales Representative" />
-            <label for="job-sales"><span class="job-icon">🤝</span> Sales Representative</label>
-          </div>
-
-        </div>
-
-        <select class="more-jobs" id="more-jobs">
-          <option value="">— Or pick from more roles —</option>
-          <optgroup label="Tech">
-            <option value="Frontend Developer">Frontend Developer</option>
-            <option value="Backend Developer">Backend Developer</option>
-            <option value="Full Stack Developer">Full Stack Developer</option>
-            <option value="Mobile Developer">Mobile Developer</option>
-            <option value="Machine Learning Engineer">Machine Learning Engineer</option>
-            <option value="Data Analyst">Data Analyst</option>
-            <option value="Cybersecurity Analyst">Cybersecurity Analyst</option>
-            <option value="Solutions Architect">Solutions Architect</option>
-            <option value="QA Engineer">QA Engineer</option>
-            <option value="Site Reliability Engineer">Site Reliability Engineer</option>
-          </optgroup>
-          <optgroup label="Business">
-            <option value="Business Analyst">Business Analyst</option>
-            <option value="Project Manager">Project Manager</option>
-            <option value="Operations Manager">Operations Manager</option>
-            <option value="Management Consultant">Management Consultant</option>
-            <option value="Supply Chain Analyst">Supply Chain Analyst</option>
-          </optgroup>
-          <optgroup label="Creative & Design">
-            <option value="Graphic Designer">Graphic Designer</option>
-            <option value="Content Writer">Content Writer</option>
-            <option value="Brand Strategist">Brand Strategist</option>
-            <option value="Social Media Manager">Social Media Manager</option>
-          </optgroup>
-          <optgroup label="Finance & Legal">
-            <option value="Investment Banker">Investment Banker</option>
-            <option value="Accountant">Accountant</option>
-            <option value="Compliance Analyst">Compliance Analyst</option>
-            <option value="Paralegal">Paralegal</option>
-          </optgroup>
-          <optgroup label="People & Admin">
-            <option value="Human Resources Manager">Human Resources Manager</option>
-            <option value="Recruiter">Recruiter</option>
-            <option value="Executive Assistant">Executive Assistant</option>
-            <option value="Customer Success Manager">Customer Success Manager</option>
-          </optgroup>
-        </select>
-      </div>
-    </div>
-
-    <!-- Step 4: Notes (optional) -->
-    <div class="card">
-      <div class="card-header">
-        <div class="step-badge">4</div>
-        <h2>Additional Instructions <span class="optional">optional</span></h2>
-      </div>
-      <div class="card-body">
-        <textarea
-          id="notes"
-          placeholder="e.g. 'Highlight my leadership experience', 'Target FAANG companies', 'Keep it to one page', 'Emphasize my Python skills'..."
-        ></textarea>
-      </div>
-    </div>
-
-    <!-- Error -->
-    <div class="error-box" id="error-box"></div>
-
-    <!-- Action -->
-    <button class="btn-remaster" id="remaster-btn">
-      <span id="btn-label">⭐ Build Prompt &amp; Open Claude.ai</span>
+    <button type="button" class="btn-primary" id="remaster-btn">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="btn-label">Build prompt</span>
     </button>
 
-    <!-- Subscription success panel -->
-    <div class="card" id="subscription-panel" style="display:none">
-      <div class="card-header" style="background:#f0fdf4; border-bottom-color:#86efac">
-        <span style="font-size:1.4rem">✅</span>
-        <div>
-          <h2 style="color:#166534">Your prompt is ready!</h2>
-        </div>
-      </div>
-      <div class="card-body">
-        <p style="margin-bottom:12px; color:#374151; font-size:0.93rem">
-          <strong>1.</strong> Copy the prompt below &nbsp;<strong>2.</strong> Open Claude.ai &nbsp;<strong>3.</strong> Paste and send
-        </p>
-        <textarea
-          id="prompt-preview"
-          readonly
-          style="width:100%; height:160px; font-size:0.78rem; font-family: 'Courier New', monospace; resize:vertical; margin-bottom:14px; background:#f8fafc;"
-        ></textarea>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
-          <button class="btn-action" id="copy-prompt-again" style="font-size:0.9rem; padding:10px 18px;">&#128203; Copy prompt</button>
-          <a
-            href="https://claude.ai/new"
-            target="_blank"
-            rel="noopener"
-            class="btn-claude-ai"
-          >
-            Open Claude.ai ↗
+    <section class="result" id="prompt-panel" hidden>
+      <div class="result-head">
+        <h2>Prompt</h2>
+        <div class="result-actions">
+          <button type="button" class="btn-secondary" id="copy-prompt">
+            <svg class="icon"><use href="#i-copy"/></svg><span>Copy</span>
+          </button>
+          <a class="btn-secondary" href="https://claude.ai/new" target="_blank" rel="noopener">
+            <svg class="icon"><use href="#i-external"/></svg><span>Open Claude.ai</span>
           </a>
         </div>
       </div>
-    </div>
+      <p class="hint">Copy the prompt, open a new chat on Claude.ai, paste it and send.</p>
+      <textarea id="prompt-preview" class="mono" rows="10" readonly></textarea>
+    </section>
 
-    <!-- API Output -->
-    <div class="card" id="output-section" style="display:none">
-      <div class="output-toolbar">
-        <h2>&#127775; Remastered Resume</h2>
-        <div class="output-actions">
-          <button class="btn-action" id="copy-btn">&#128203; Copy</button>
-          <button class="btn-action" id="download-btn">&#11015; Download .txt</button>
+    <section class="result" id="output-section" hidden>
+      <div class="result-head">
+        <h2>Rewritten resume</h2>
+        <div class="result-actions">
+          <button type="button" class="btn-secondary" id="copy-btn">
+            <svg class="icon"><use href="#i-copy"/></svg><span>Copy</span>
+          </button>
+          <button type="button" class="btn-secondary" id="download-btn">
+            <svg class="icon"><use href="#i-download"/></svg><span>Download .txt</span>
+          </button>
         </div>
       </div>
-      <div class="output-body">
-        <pre id="resume-output"></pre>
-      </div>
-    </div>
+      <pre id="resume-output" class="mono"></pre>
+    </section>
 
   </main>
 
-  <footer>
-    Resume Remaster &mdash; your resume never leaves your browser. &nbsp;&middot;&nbsp; <span style="opacity:0.6">v1.4</span>
+  <footer class="wrap site-footer">
+    Your file is read in your browser. In API mode the text is sent only to Anthropic, using your key.
   </footer>
 
-  <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="app.js"></script>
-
 </body>
 </html>

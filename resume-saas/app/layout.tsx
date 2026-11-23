@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Resume Remaster',
-  description: 'AI-powered resume rewriting for any job role',
+  description: 'Rewrite your resume for a specific role. Upload a PDF or DOCX, pick the job, and get a tailored version.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

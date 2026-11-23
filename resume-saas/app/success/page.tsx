@@ -1,177 +1,175 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase-client';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { StarIcon } from '@/components/icons';
+import ResultActions from '@/components/result-actions';
 
-export default function SuccessPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const sessionId = searchParams.get('session_id');
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [fullText, setFullText] = useState('');
-  const [resumeId, setResumeId] = useState('');
-  const [copied, setCopied] = useState(false);
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLLS = 15;
 
-  // Review state
+function ReviewForm({ resumeId }: { resumeId: string }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [displayName, setDisplayName] = useState('');
   const [comment, setComment] = useState('');
-  const [reviewed, setReviewed] = useState(false);
-  const [reviewSending, setReviewSending] = useState(false);
+  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!sessionId) { router.replace('/dashboard'); return; }
-    let attempts = 0;
-    async function poll() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/login'); return; }
-
-      const { data: resumes } = await supabase
-        .from('resumes')
-        .select('id, full_text, is_unlocked')
-        .eq('user_id', user.id)
-        .eq('is_unlocked', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (resumes && resumes.length > 0) {
-        setFullText(resumes[0].full_text);
-        setResumeId(resumes[0].id);
-        setStatus('ready');
-      } else if (attempts < 10) {
-        attempts++;
-        setTimeout(poll, 1500);
-      } else {
-        setStatus('error');
-      }
-    }
-    poll();
-  }, [sessionId, router]);
-
-  async function submitReview() {
-    if (rating === 0 || !resumeId) return;
-    setReviewSending(true);
-    await fetch('/api/reviews', {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (rating === 0) return;
+    setState('sending');
+    setError('');
+    const res = await fetch('/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeId, rating, comment, displayName: displayName.trim() }),
+      body: JSON.stringify({ resumeId, rating, comment, displayName }),
     });
-    setReviewed(true);
-    setReviewSending(false);
+    if (res.ok) { setState('sent'); return; }
+    const data = await res.json().catch(() => ({}));
+    setError(data.error || 'Could not save the review.');
+    setState('idle');
   }
+
+  if (state === 'sent') {
+    return <p className="text-sm text-slate-700">Thanks. Your review will appear on the home page.</p>;
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <h2 className="font-medium mb-1">Leave a review</h2>
+      <p className="text-sm text-slate-500 mb-4">Optional. Reviews are shown on the home page with the name you enter.</p>
+
+      <div className="flex gap-1 mb-4 text-amber-500" role="radiogroup" aria-label="Rating">
+        {[1, 2, 3, 4, 5].map(star => (
+          <button
+            key={star}
+            type="button"
+            role="radio"
+            aria-checked={rating === star}
+            aria-label={`${star} star${star > 1 ? 's' : ''}`}
+            onMouseEnter={() => setHover(star)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => setRating(star)}
+            className="p-0.5"
+          >
+            <StarIcon className="w-7 h-7" filled={star <= (hover || rating)} />
+          </button>
+        ))}
+      </div>
+
+      <label htmlFor="display-name" className="block text-sm font-medium mb-1.5">Name to show</label>
+      <input
+        id="display-name"
+        className="input mb-3"
+        placeholder="First name and initial, or leave blank"
+        value={displayName}
+        onChange={e => setDisplayName(e.target.value)}
+        maxLength={40}
+      />
+
+      <label htmlFor="comment" className="block text-sm font-medium mb-1.5">Comment</label>
+      <textarea
+        id="comment"
+        className="input mb-4"
+        rows={3}
+        maxLength={1000}
+        value={comment}
+        onChange={e => setComment(e.target.value)}
+      />
+
+      {error && <p className="text-sm text-red-700 mb-3">{error}</p>}
+      <button className="btn-primary" disabled={rating === 0 || state === 'sending'}>
+        {state === 'sending' ? 'Sending...' : 'Submit review'}
+      </button>
+    </form>
+  );
+}
+
+function SuccessContent() {
+  const resumeId = useSearchParams().get('resume');
+  const [status, setStatus] = useState<'loading' | 'ready' | 'pending' | 'error'>('loading');
+  const [fullText, setFullText] = useState('');
+
+  useEffect(() => {
+    if (!resumeId) { setStatus('error'); return; }
+    let cancelled = false;
+    let polls = 0;
+
+    // The Stripe webhook unlocks the resume; it can land a few seconds after the redirect.
+    async function poll() {
+      const res = await fetch(`/api/resumes/${encodeURIComponent(resumeId!)}`);
+      if (cancelled) return;
+      if (!res.ok) { setStatus('error'); return; }
+      const data = await res.json();
+      if (data.isUnlocked) {
+        setFullText(data.fullText);
+        setStatus('ready');
+      } else if (++polls < MAX_POLLS) {
+        setTimeout(poll, POLL_INTERVAL_MS);
+      } else {
+        setStatus('pending');
+      }
+    }
+    poll().catch(() => !cancelled && setStatus('error'));
+    return () => { cancelled = true; };
+  }, [resumeId]);
 
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-600">Unlocking your resume…</p>
+        <span className="w-8 h-8 border-2 border-slate-300 border-t-brand-700 rounded-full animate-spin" />
+        <p className="text-slate-600">Confirming your payment...</p>
       </div>
     );
   }
 
-  if (status === 'error') {
+  if (status !== 'ready') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card p-8 max-w-sm text-center">
-          <p className="text-red-600 font-semibold mb-4">Could not load your resume. Please check your dashboard.</p>
-          <Link href="/dashboard" className="btn-primary">Go to dashboard</Link>
+        <div className="card p-6 max-w-sm text-center">
+          <p className="text-slate-700 mb-4">
+            {status === 'pending'
+              ? 'Your payment is still being confirmed. Refresh this page in a minute.'
+              : 'We could not find this resume.'}
+          </p>
+          <Link href="/dashboard" className="btn-secondary">Back to dashboard</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
-
-        <div className="text-center">
-          <p className="text-4xl mb-2">🎉</p>
-          <h1 className="text-2xl font-black text-slate-900">Your remastered resume is ready!</h1>
-          <p className="text-slate-500 mt-1">Copy it below and paste into your application.</p>
+        <div>
+          <h1 className="text-2xl font-semibold">Payment received</h1>
+          <p className="text-slate-600 mt-1">Your full resume is below.</p>
         </div>
 
-        {/* Full resume */}
-        <div className="card">
-          <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50">
-            <span className="font-semibold text-slate-700">✨ Full Resume</span>
-            <div className="flex gap-2">
-              <button onClick={() => { navigator.clipboard.writeText(fullText); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="btn-secondary py-1.5 px-3 text-sm">
-                {copied ? '✓ Copied' : '📋 Copy'}
-              </button>
-              <button onClick={() => {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob([fullText], { type: 'text/plain' }));
-                a.download = 'remastered-resume.txt';
-                a.click();
-              }} className="btn-secondary py-1.5 px-3 text-sm">⬇ Download</button>
-            </div>
+        <section className="card">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-200">
+            <h2 className="font-medium">Rewritten resume</h2>
+            <ResultActions text={fullText} />
           </div>
-          <pre className="p-5 text-sm font-mono whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto">{fullText}</pre>
-        </div>
+          <pre className="p-5 text-sm font-mono whitespace-pre-wrap break-words leading-relaxed max-h-[32rem] overflow-y-auto">{fullText}</pre>
+        </section>
 
-        {/* Review prompt */}
-        <div className="card p-6">
-          {reviewed ? (
-            <div className="text-center">
-              <p className="text-2xl mb-2">⭐</p>
-              <p className="text-green-700 font-semibold">Thanks for your review!</p>
-              <p className="text-slate-500 text-sm mt-1">It&apos;ll show up on our homepage to help others.</p>
-            </div>
-          ) : (
-            <>
-              <h2 className="font-bold text-slate-800 mb-1">How did we do?</h2>
-              <p className="text-sm text-slate-500 mb-5">Your review shows on our homepage as a verified user — helps others decide.</p>
+        <section className="card p-5">
+          <ReviewForm resumeId={resumeId!} />
+        </section>
 
-              {/* Stars */}
-              <div className="flex gap-1 mb-5">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    onMouseEnter={() => setHover(star)}
-                    onMouseLeave={() => setHover(0)}
-                    onClick={() => setRating(star)}
-                    className={`text-3xl transition-transform hover:scale-110 ${star <= (hover || rating) ? 'text-yellow-400' : 'text-slate-200'}`}
-                  >★</button>
-                ))}
-              </div>
-
-              {/* Name */}
-              <input
-                className="input mb-3"
-                placeholder="Your first name (shown publicly, e.g. Sarah M.)"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                maxLength={40}
-              />
-
-              {/* Comment */}
-              <textarea
-                className="input mb-4"
-                rows={3}
-                placeholder="What did you think? Did it help with your job search? (optional)"
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-              />
-
-              <button
-                className="btn-primary"
-                onClick={submitReview}
-                disabled={rating === 0 || reviewSending}
-              >
-                {reviewSending ? 'Sending…' : 'Submit review'}
-              </button>
-              {rating === 0 && <p className="text-xs text-slate-400 mt-2">Select a star rating to submit.</p>}
-            </>
-          )}
-        </div>
-
-        <div className="text-center">
-          <Link href="/dashboard" className="text-brand-600 text-sm hover:underline">← Remaster another resume</Link>
-        </div>
+        <Link href="/dashboard" className="inline-block text-sm text-brand-700 hover:underline">Rewrite another resume</Link>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense>
+      <SuccessContent />
+    </Suspense>
   );
 }

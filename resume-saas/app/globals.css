@@ -3,20 +3,26 @@
 @tailwind utilities;
 
 @layer base {
-  body { @apply bg-slate-50 text-slate-900 antialiased; }
+  body { @apply bg-slate-50 text-slate-800 antialiased; }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-brand-700 text-white font-medium
+      hover:bg-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700
+      disabled:opacity-60 disabled:cursor-not-allowed;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3 border-2 border-brand-600 text-brand-600 hover:bg-brand-50 font-semibold rounded-xl transition-all;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border border-slate-300 bg-white text-slate-800 font-medium
+      hover:border-brand-700 hover:text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700
+      disabled:opacity-60 disabled:cursor-not-allowed;
   }
   .input {
-    @apply w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all text-sm;
+    /* text-base keeps iOS Safari from zooming in on focus */
+    @apply w-full px-3 py-2.5 rounded-md border border-slate-300 bg-white text-base
+      focus:outline-none focus:ring-2 focus:ring-brand-700 focus:border-brand-700;
   }
   .card {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden;
+    @apply bg-white border border-slate-200 rounded-lg;
   }
 }

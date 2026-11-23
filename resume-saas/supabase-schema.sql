@@ -1,18 +1,22 @@
--- Run this entire file in your Supabase project's SQL Editor
+-- Fresh install: run this whole file in the Supabase SQL editor.
+-- For a database created from an earlier version of this file, run supabase-upgrade.sql instead.
+--
+-- Access model: the browser only ever reads its own profile row. Everything
+-- else (resumes, reviews, promo codes, Stripe events) is read and written by
+-- the Next.js API routes with the service-role key, which bypasses RLS.
+-- RLS is enabled on every table so the public anon key can't touch them.
 
--- Profiles table (extends auth.users)
 create table public.profiles (
-  id uuid references auth.users on delete cascade primary key,
+  id uuid primary key references auth.users on delete cascade,
   stripe_customer_id text unique,
   subscription_status text not null default 'free',
   subscription_period_end timestamptz,
-  created_at timestamptz default now() not null
+  created_at timestamptz not null default now()
 );
 
--- Resumes table
 create table public.resumes (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users on delete cascade not null,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
   job_type text not null,
   preview_text text not null,
   full_text text not null,
@@ -20,72 +24,105 @@ create table public.resumes (
   unlock_method text check (unlock_method in ('single', 'monthly', 'promo')),
   unlocked_at timestamptz,
   stripe_session_id text,
-  created_at timestamptz default now() not null
+  created_at timestamptz not null default now()
 );
 
--- Reviews table (public read, authenticated write)
+create index resumes_user_created_idx on public.resumes (user_id, created_at desc);
+
 create table public.reviews (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users on delete cascade not null,
-  resume_id uuid references public.resumes on delete cascade not null,
-  rating integer not null check (rating >= 1 and rating <= 5),
-  comment text,
-  display_name text,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  resume_id uuid not null unique references public.resumes on delete cascade,
+  rating integer not null check (rating between 1 and 5),
+  comment text check (char_length(comment) <= 1000),
+  display_name text check (char_length(display_name) <= 40),
   job_type text,
   unlock_method text,
-  purchased_at timestamptz,
-  created_at timestamptz default now() not null
+  created_at timestamptz not null default now()
 );
 
--- Enable RLS
-alter table public.profiles enable row level security;
-alter table public.resumes enable row level security;
-alter table public.reviews enable row level security;
-
--- Profiles policies
-create policy "Users can view own profile" on public.profiles
-  for select using (auth.uid() = id);
-create policy "Users can update own profile" on public.profiles
-  for update using (auth.uid() = id);
-
--- Resumes policies
-create policy "Users can view own resumes" on public.resumes
-  for select using (auth.uid() = user_id);
-create policy "Users can insert own resumes" on public.resumes
-  for insert with check (auth.uid() = user_id);
-
--- Reviews policies
-create policy "Anyone can read reviews" on public.reviews
-  for select using (true);
-create policy "Users can insert own reviews" on public.reviews
-  for insert with check (auth.uid() = user_id);
-
--- Promo codes table (one-time use)
 create table public.promo_codes (
-  id uuid default gen_random_uuid() primary key,
+  id uuid primary key default gen_random_uuid(),
   code text unique not null,
   used_by uuid references auth.users,
   used_at timestamptz,
-  created_at timestamptz default now() not null
+  created_at timestamptz not null default now()
 );
 
+create table public.stripe_events (
+  id text primary key,
+  type text not null,
+  received_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+alter table public.resumes enable row level security;
+alter table public.reviews enable row level security;
 alter table public.promo_codes enable row level security;
+alter table public.stripe_events enable row level security;
 
--- Anyone authenticated can attempt to redeem (the API handles the logic)
-create policy "Authenticated users can read promo codes" on public.promo_codes
-  for select using (auth.uid() is not null);
-create policy "Authenticated users can update promo codes" on public.promo_codes
-  for update using (auth.uid() is not null);
+-- The only client-facing policy. There is deliberately no update policy:
+-- subscription fields are written by the Stripe webhook alone.
+create policy "Users can read own profile" on public.profiles
+  for select to authenticated using (auth.uid() = id);
 
--- Auto-create profile row when a user signs up
+-- Create a profile row for each new user.
 create or replace function public.handle_new_user()
-returns trigger as $$
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
 begin
   insert into public.profiles (id) values (new.id);
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Redeem a single-use promo code against one of the user's locked resumes.
+-- Runs as one transaction: if any check fails, nothing is changed, and the
+-- conditional update on promo_codes means two concurrent calls can't both win.
+create or replace function public.redeem_promo_code(p_code text, p_resume_id uuid, p_user_id uuid)
+returns text
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_unlocked boolean;
+  v_full_text text;
+  v_promo_id uuid;
+begin
+  select is_unlocked, full_text into v_unlocked, v_full_text
+  from resumes
+  where id = p_resume_id and user_id = p_user_id
+  for update;
+
+  if not found then
+    raise exception 'resume_not_found';
+  end if;
+  if v_unlocked then
+    raise exception 'already_unlocked';
+  end if;
+
+  update promo_codes
+  set used_by = p_user_id, used_at = now()
+  where code = upper(trim(p_code)) and used_by is null
+  returning id into v_promo_id;
+
+  if v_promo_id is null then
+    raise exception 'invalid_code';
+  end if;
+
+  update resumes
+  set is_unlocked = true, unlock_method = 'promo', unlocked_at = now()
+  where id = p_resume_id;
+
+  return v_full_text;
+end;
+$$;
+
+-- Only the service role (the API route) may call it.
+revoke execute on function public.redeem_promo_code(text, uuid, uuid) from public, anon, authenticated;

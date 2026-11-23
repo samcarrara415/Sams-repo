@@ -1,60 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-admin';
 
-// Admin client needed to bypass RLS for the atomic redeem update
-const adminSupabase = createAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const ERRORS: Record<string, { message: string; status: number }> = {
+  invalid_code: { message: 'That code is not valid or has already been used.', status: 400 },
+  resume_not_found: { message: 'Resume not found.', status: 404 },
+  already_unlocked: { message: 'This resume is already unlocked.', status: 409 },
+};
 
 export async function POST(request: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 });
 
-  const { code, resumeId } = await request.json() as { code: string; resumeId: string };
-  if (!code || !resumeId) return NextResponse.json({ error: 'Missing code or resumeId' }, { status: 400 });
+  const body = await request.json().catch(() => ({}));
+  const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
+  const resumeId = typeof body.resumeId === 'string' ? body.resumeId : '';
+  if (!code || !resumeId) return NextResponse.json({ error: 'Missing code or resume.' }, { status: 400 });
 
-  // Find the code — must exist and be unused
-  const { data: promo } = await adminSupabase
-    .from('promo_codes')
-    .select('id, used_by')
-    .eq('code', code.trim().toUpperCase())
-    .single();
+  // Claiming the code and unlocking the resume happen in one database
+  // transaction (see redeem_promo_code in supabase-schema.sql), so a code
+  // can't be used twice by concurrent requests or burned on a bad resume id.
+  const { data: fullText, error } = await createAdminClient().rpc('redeem_promo_code', {
+    p_code: code,
+    p_resume_id: resumeId,
+    p_user_id: user.id,
+  });
 
-  if (!promo) {
-    return NextResponse.json({ error: 'Invalid code. Double-check and try again.' }, { status: 400 });
+  if (error) {
+    const known = ERRORS[error.message];
+    if (known) return NextResponse.json({ error: known.message }, { status: known.status });
+    console.error('Promo redemption failed:', error);
+    return NextResponse.json({ error: 'Could not redeem the code. Try again.' }, { status: 500 });
   }
 
-  if (promo.used_by) {
-    return NextResponse.json({ error: 'This code has already been used.' }, { status: 400 });
-  }
-
-  // Mark the code as used
-  const { error: updateError } = await adminSupabase
-    .from('promo_codes')
-    .update({ used_by: user.id, used_at: new Date().toISOString() })
-    .eq('id', promo.id)
-    .is('used_by', null); // extra safety: only update if still unused
-
-  if (updateError) {
-    return NextResponse.json({ error: 'Code already redeemed. Please try another.' }, { status: 400 });
-  }
-
-  // Unlock the resume and record method + timestamp
-  await adminSupabase
-    .from('resumes')
-    .update({ is_unlocked: true, unlock_method: 'promo', unlocked_at: new Date().toISOString() })
-    .eq('id', resumeId)
-    .eq('user_id', user.id);
-
-  // Fetch and return the full text
-  const { data: resume } = await adminSupabase
-    .from('resumes')
-    .select('full_text')
-    .eq('id', resumeId)
-    .single();
-
-  return NextResponse.json({ success: true, fullText: resume?.full_text });
+  return NextResponse.json({ fullText });
 }

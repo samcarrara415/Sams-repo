@@ -1,42 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import mammoth from 'mammoth';
-import pdfParse from 'pdf-parse';
+import { extractText as extractPdfText, getDocumentProxy } from 'unpdf';
 import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { ALL_JOBS } from '@/lib/jobs';
+import { hasActiveSubscription } from '@/lib/subscription';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+export const runtime = 'nodejs';
+export const maxDuration = 120;
 
-const JOB_TYPES = [
-  'Software Engineer','Frontend Developer','Backend Developer','Full Stack Developer',
-  'Data Scientist','Data Analyst','Machine Learning Engineer','DevOps / Cloud Engineer',
-  'Product Manager','UX / UI Designer','Project Manager','Business Analyst',
-  'Marketing Manager','Sales Representative','Financial Analyst','Cybersecurity Analyst',
-  'Solutions Architect','Mobile Developer','QA Engineer','Human Resources Manager',
-  'Operations Manager','Content Writer','Graphic Designer','Recruiter',
-  'Investment Banker','Accountant','Customer Success Manager','Management Consultant',
-];
+const MODEL = 'claude-opus-5-5';
+const MAX_FILE_BYTES = 4 * 1024 * 1024; // Vercel rejects request bodies over 4.5 MB
+const MAX_NOTES_LENGTH = 1000;
+const MAX_RESUME_CHARS = 30000;
+// Each preview costs an API call, so cap how many unpaid previews one account can make.
+const FREE_PREVIEWS_PER_DAY = 5;
 
 function buildPrompt(resumeText: string, jobType: string, notes: string): string {
-  const noteSection = notes.trim() ? `\n\nAdditional instructions:\n${notes.trim()}` : '';
-  return `You are an expert professional resume writer specializing in tailoring resumes for specific roles.
+  const extra = notes ? `\n\nExtra instructions from the candidate:\n${notes}` : '';
+  return `You are an experienced resume writer. Rewrite the resume below for a ${jobType} role.
 
-Remaster the resume below to be highly optimized for a **${jobType}** position.
+Rules:
+- Keep every fact accurate: names, employers, titles, dates, education, and grades.
+- Do not invent experience, skills, employers, or numbers that are not in the original. Quantify results only where the original gives the figures.
+- Rewrite bullet points to start with strong verbs and show impact.
+- Put the experience and skills most relevant to ${jobType} roles first.
+- Write or tighten a short summary aimed at ${jobType} roles.
+- Use keywords an applicant tracking system would look for in ${jobType} postings, where they truthfully apply.
+- Output plain text with no Markdown. Use consistent section headings and "-" for bullets.${extra}
 
-Guidelines:
-- Keep ALL factual details accurate (dates, company names, titles, education, GPAs, etc.)
-- Rewrite bullet points with strong action verbs and quantifiable achievements where possible
-- Emphasize skills, tools, and experiences most relevant to ${jobType} roles
-- Optimize section ordering to lead with the most relevant content
-- Add or refine a professional Summary/Objective targeting ${jobType} roles
-- Use ATS-friendly language and relevant keywords for ${jobType}
-- Keep formatting clean with consistent structure${noteSection}
-
-Original Resume:
+Original resume:
 ---
 ${resumeText}
 ---
 
-Return only the fully remastered resume text, properly formatted and ready to use:`;
+Return only the rewritten resume.`;
 }
 
 function createPreview(fullText: string): string {
@@ -45,88 +44,125 @@ function createPreview(fullText: string): string {
   return lines.slice(0, previewLines).join('\n');
 }
 
+async function extractText(file: File): Promise<string | null> {
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  const bytes = await file.arrayBuffer();
+  if (ext === 'pdf') {
+    const pdf = await getDocumentProxy(new Uint8Array(bytes));
+    return (await extractPdfText(pdf, { mergePages: true })).text;
+  }
+  if (ext === 'docx') return (await mammoth.extractRawText({ buffer: Buffer.from(bytes) })).value;
+  return null;
+}
+
+function jsonError(error: string, status: number) {
+  return NextResponse.json({ error }, { status });
+}
+
 export async function POST(request: NextRequest) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return jsonError('Sign in first.', 401);
+
+  const formData = await request.formData();
+  const file = formData.get('file');
+  const jobType = formData.get('jobType');
+  const notes = String(formData.get('notes') ?? '').trim().slice(0, MAX_NOTES_LENGTH);
+
+  if (!(file instanceof File) || typeof jobType !== 'string') return jsonError('Missing file or job type.', 400);
+  if (!ALL_JOBS.includes(jobType)) return jsonError('Unknown job type.', 400);
+  if (file.size > MAX_FILE_BYTES) return jsonError('File is larger than 4 MB.', 413);
+
+  let resumeText: string | null;
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    resumeText = await extractText(file);
+  } catch (err) {
+    console.warn('Resume parsing failed:', err instanceof Error ? err.message : err);
+    return jsonError('Could not read this file. Try saving it again as PDF or DOCX.', 400);
+  }
+  if (resumeText === null) return jsonError('Only PDF and DOCX files are supported.', 400);
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const jobType = formData.get('jobType') as string;
-    const notes = (formData.get('notes') as string) || '';
+  resumeText = resumeText.trim();
+  if (resumeText.length < 50) {
+    return jsonError('No readable text found. If the PDF is a scanned image, export a text PDF or DOCX instead.', 400);
+  }
+  if (resumeText.length > MAX_RESUME_CHARS) {
+    return jsonError('This file has more text than a resume normally does. Upload just the resume.', 400);
+  }
 
-    if (!file || !jobType) return NextResponse.json({ error: 'Missing file or jobType' }, { status: 400 });
-    if (!JOB_TYPES.includes(jobType)) return NextResponse.json({ error: 'Invalid job type' }, { status: 400 });
+  const admin = createAdminClient();
 
-    // Parse file
-    const buffer = Buffer.from(await file.arrayBuffer());
-    let resumeText = '';
-    const ext = file.name.split('.').pop()?.toLowerCase();
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('subscription_status, subscription_period_end')
+    .eq('id', user.id)
+    .single();
+  const isSubscribed = hasActiveSubscription(profile);
 
-    if (ext === 'pdf') {
-      const data = await pdfParse(buffer);
-      resumeText = data.text;
-    } else if (ext === 'docx') {
-      const result = await mammoth.extractRawText({ buffer });
-      resumeText = result.value;
-    } else {
-      return NextResponse.json({ error: 'Only PDF and DOCX are supported' }, { status: 400 });
+  if (!isSubscribed) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await admin
+      .from('resumes')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', since);
+    if ((count ?? 0) >= FREE_PREVIEWS_PER_DAY) {
+      return jsonError(`You can make ${FREE_PREVIEWS_PER_DAY} previews a day on the free tier. Try again tomorrow or subscribe.`, 429);
     }
+  }
 
-    resumeText = resumeText.trim();
-    if (resumeText.length < 50) {
-      return NextResponse.json({ error: 'Could not extract text from file. Make sure it has selectable text (not a scanned image).' }, { status: 400 });
-    }
-
-    // Check subscription status — subscribers skip payment
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_status, subscription_period_end')
-      .eq('id', user.id)
-      .single();
-
-    const isSubscribed = profile?.subscription_status === 'active' &&
-      profile?.subscription_period_end &&
-      new Date(profile.subscription_period_end) > new Date();
-
-    // Call Claude Haiku
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+  let fullText: string;
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const message = await anthropic.beta.messages.create({
+      model: MODEL,
+      max_tokens: 16000,
+      output_config: { effort: 'medium' },
+      // On a safety-classifier refusal the API retries on a fallback model in the same call.
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
       messages: [{ role: 'user', content: buildPrompt(resumeText, jobType, notes) }],
     });
 
-    const fullText = (message.content[0] as { type: string; text: string }).text;
-    const previewText = createPreview(fullText);
-
-    // Store in DB
-    const now = new Date().toISOString();
-    const { data: resume, error: dbError } = await supabase
-      .from('resumes')
-      .insert({
-        user_id: user.id,
-        job_type: jobType,
-        preview_text: previewText,
-        full_text: fullText,
-        is_unlocked: isSubscribed,
-        unlock_method: isSubscribed ? 'monthly' : null,
-        unlocked_at: isSubscribed ? now : null,
-      })
-      .select('id, is_unlocked')
-      .single();
-
-    if (dbError) throw dbError;
-
-    return NextResponse.json({
-      resumeId: resume.id,
-      previewText: resume.preview_text,
-      isUnlocked: resume.is_unlocked,
-      fullText: resume.is_unlocked ? fullText : null,
-    });
-  } catch (err: unknown) {
-    console.error('Remaster error:', err);
-    const msg = err instanceof Error ? err.message : 'Server error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    if (message.stop_reason === 'refusal') {
+      return jsonError('The model declined to rewrite this file.', 422);
+    }
+    fullText = message.content
+      .map(block => (block.type === 'text' ? block.text : ''))
+      .join('')
+      .trim();
+    if (!fullText) throw new Error('Empty response');
+  } catch (err) {
+    console.error('Anthropic request failed:', err);
+    if (err instanceof Anthropic.RateLimitError) return jsonError('The service is busy. Try again in a minute.', 503);
+    return jsonError('The rewrite failed. Try again.', 502);
   }
+
+  const now = new Date().toISOString();
+  const previewText = createPreview(fullText);
+  const { data: resume, error: dbError } = await admin
+    .from('resumes')
+    .insert({
+      user_id: user.id,
+      job_type: jobType,
+      preview_text: previewText,
+      full_text: fullText,
+      is_unlocked: isSubscribed,
+      unlock_method: isSubscribed ? 'monthly' : null,
+      unlocked_at: isSubscribed ? now : null,
+    })
+    .select('id')
+    .single();
+
+  if (dbError || !resume) {
+    console.error('Saving resume failed:', dbError);
+    return jsonError('Could not save the result. Try again.', 500);
+  }
+
+  return NextResponse.json({
+    resumeId: resume.id,
+    previewText,
+    isUnlocked: isSubscribed,
+    fullText: isSubscribed ? fullText : null,
+  });
 }
