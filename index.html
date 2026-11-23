@@ -3,153 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sam's Projects</title>
+  <title>Sam Carrara · Projects</title>
+  <meta name="description" content="Live demos of web apps and tools built by Sam Carrara." />
   <style>
+    :root {
+      --bg: #f7f7f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317;
+        --card: #1a1d23;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: #2a2e36;
+        --accent: #60a5fa;
+      }
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 48px 16px;
     }
-
-    h1 {
-      font-size: 2.2rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-      background: linear-gradient(135deg, #a5b4fc, #818cf8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .subtitle {
-      color: #94a3b8;
-      margin-bottom: 48px;
-      font-size: 1rem;
-    }
-
+    main { max-width: 820px; margin: 0 auto; }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .intro { color: var(--muted); margin: 6px 0 32px; max-width: 600px; }
+    .intro a, footer a { color: var(--accent); }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px;
-      width: 100%;
-      max-width: 800px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
     }
-
     a.card {
-      display: block;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 14px;
-      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
       text-decoration: none;
       color: inherit;
-      transition: all 0.2s;
+      transition: border-color 0.15s;
     }
-
-    a.card:hover {
-      border-color: #818cf8;
-      background: #1e2a45;
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(129, 140, 248, 0.15);
-    }
-
-    .card-icon {
-      font-size: 2rem;
-      margin-bottom: 14px;
-    }
-
-    .card h2 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 6px;
-      color: #f1f5f9;
-    }
-
-    .card p {
-      font-size: 0.85rem;
-      color: #94a3b8;
-      line-height: 1.5;
-    }
-
-    .tag {
-      display: inline-block;
-      margin-top: 12px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 3px 9px;
-      border-radius: 20px;
-      background: #312e81;
-      color: #a5b4fc;
-      letter-spacing: 0.3px;
-    }
-
-    footer {
-      margin-top: 48px;
-      font-size: 0.8rem;
-      color: #475569;
-    }
+    a.card:hover, a.card:focus-visible { border-color: var(--accent); }
+    .card h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; }
+    .card p { font-size: 0.9rem; color: var(--muted); flex: 1; }
+    .meta { margin-top: 12px; font-size: 0.78rem; font-weight: 500; color: var(--accent); }
+    footer { margin-top: 40px; font-size: 0.85rem; color: var(--muted); }
   </style>
 </head>
 <body>
+  <main>
+    <h1>Projects</h1>
+    <p class="intro">Live demos of web apps I've built with AI coding agents. More about me and my other work is on <a href="https://samcarrara415.github.io/samswebsite/">my portfolio</a>.</p>
 
-  <h1>Sam's Projects</h1>
-  <p class="subtitle">A collection of web tools and games</p>
+    <div class="grid">
+      <a class="card" href="claude-studio-web/">
+        <h2>mcode</h2>
+        <p>A C++ playground for your phone or desktop. Code compiles on gcc and the output prints to a terminal. Installs as an app.</p>
+        <span class="meta">C++ tool</span>
+      </a>
 
-  <div class="grid">
+      <a class="card" href="cpp-academy/">
+        <h2>C++ Academy</h2>
+        <p>Learn C++ from your phone, with lessons, exercises and a built-in editor.</p>
+        <span class="meta">Learning app</span>
+      </a>
 
-    <a class="card" href="fomo-tracker/">
-      <div class="card-icon">🚀</div>
-      <h2>FOMO Radar</h2>
-      <p>Live meme-coin screener — new low-cap coins with rapid momentum, growing buyers, and rug-risk checks.</p>
-      <span class="tag">Crypto Tool</span>
-    </a>
+      <a class="card" href="resume-remaster/">
+        <h2>Resume Remaster</h2>
+        <p>Upload a PDF or DOCX resume and have Claude rewrite it for a target job.</p>
+        <span class="meta">AI tool</span>
+      </a>
 
-    <a class="card" href="resume-remaster/">
-      <div class="card-icon">✨</div>
-      <h2>Resume Remaster</h2>
-      <p>Upload a PDF or DOCX resume and let AI rewrite it for any target job role.</p>
-      <span class="tag">AI Tool</span>
-    </a>
+      <a class="card" href="fomo-tracker/">
+        <h2>FOMO Radar</h2>
+        <p>A live screener for new crypto tokens that ranks momentum and flags common rug-pull warning signs.</p>
+        <span class="meta">Data tool</span>
+      </a>
 
-    <a class="card" href="WEB%20trivia%20game%20about%20my%20college/">
-      <div class="card-icon">🎓</div>
-      <h2>College Trivia</h2>
-      <p>A web trivia game all about college knowledge and campus life.</p>
-      <span class="tag">Game</span>
-    </a>
+      <a class="card" href="kitchen-catering/">
+        <h2>The Seasonal Table</h2>
+        <p>A kitchen and catering website with a weekly menu and an event booking form.</p>
+        <span class="meta">Website</span>
+      </a>
 
-    <a class="card" href="cpp-academy/">
-      <div class="card-icon">💻</div>
-      <h2>C++ Academy</h2>
-      <p>Mobile-first PWA to master C++ on the go — lessons, challenges, and an in-browser IDE.</p>
-      <span class="tag">Learn</span>
-    </a>
+      <a class="card" href="WEB%20trivia%20game%20about%20my%20college/">
+        <h2>College Trivia</h2>
+        <p>A multi-page trivia game about my college and campus life.</p>
+        <span class="meta">Game</span>
+      </a>
+    </div>
 
-    <a class="card" href="kitchen-catering/">
-      <div class="card-icon">🍽️</div>
-      <h2>The Seasonal Table</h2>
-      <p>Kitchen &amp; catering site — rotating weekly menu and a contact area for booking events.</p>
-      <span class="tag">Website</span>
-    </a>
-
-    <a class="card" href="claude-studio-web/">
-      <div class="card-icon">▸_</div>
-      <h2>mcode</h2>
-      <p>Write C++ and run it right in your browser on a real gcc compiler — output prints to a terminal. Open/save files, installable as an app.</p>
-      <span class="tag">Code</span>
-    </a>
-
-  </div>
-
-  <footer>github.com/samcarrara415</footer>
-
+    <footer>
+      Source on <a href="https://github.com/samcarrara415/Sams-repo">GitHub</a>.
+    </footer>
+  </main>
 </body>
 </html>
