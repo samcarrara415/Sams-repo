@@ -2,529 +2,674 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0b1020" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#f6f6f3" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#151618" media="(prefers-color-scheme: dark)" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="C++ Academy" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="description" content="Learn and master C++ on the go — lessons, exercises, and an in-browser IDE." />
+<meta name="description" content="Learn C++ in the browser: 44 short lessons with exercises, practice problems, and an editor that compiles your code with GCC." />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon-180.png" />
 <title>C++ Academy</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
 
 <style>
 :root {
-  --bg: #0b1020;
-  --bg-2: #111835;
-  --panel: #161e3f;
-  --panel-2: #1c264f;
-  --line: #2a3568;
-  --text: #e6ecff;
-  --muted: #99a4cf;
-  --accent: #6366f1;
-  --accent-2: #22d3ee;
-  --good: #22c55e;
-  --bad: #ef4444;
-  --warn: #f59e0b;
-  --code-bg: #0e1430;
-  --safe-top: env(safe-area-inset-top);
-  --safe-bot: env(safe-area-inset-bottom);
+  color-scheme: light dark;
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --surface-2: #efefeb;
+  --border: #e0e0da;
+  --text: #1d1d1b;
+  --text-2: #5e5e58;
+  --accent: #1f5fae;
+  --accent-text: #ffffff;
+  --accent-soft: #e5edf7;
+  --ok: #1d7a4b;
+  --ok-soft: #e3f2e9;
+  --err: #b42318;
+  --err-soft: #fbe9e7;
+  --code-bg: #fafaf8;
+  --tok-keyword: #8a3ab9;
+  --tok-type: #1f5fae;
+  --tok-string: #a3470f;
+  --tok-number: #0b7a75;
+  --tok-comment: #7a7a72;
+  --tok-meta: #1d7a4b;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.375rem;
+  --radius: 10px;
+  --code-size: 14px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151618;
+    --surface: #1d1e21;
+    --surface-2: #26282c;
+    --border: #33353a;
+    --text: #e9e9e6;
+    --text-2: #a3a49e;
+    --accent: #6fa8ea;
+    --accent-text: #0f1a28;
+    --accent-soft: #1e2b3b;
+    --ok: #57c48f;
+    --ok-soft: #18291f;
+    --err: #f2877c;
+    --err-soft: #321b19;
+    --code-bg: #18191b;
+    --tok-keyword: #c792ea;
+    --tok-type: #7fb4ee;
+    --tok-string: #e5a873;
+    --tok-number: #6fd0c4;
+    --tok-comment: #8a8b85;
+    --tok-meta: #8bd49e;
+  }
+}
+
+/* iOS Safari zooms the page when a focused field's text is under 16px. */
+@supports (-webkit-touch-callout: none) {
+  :root { --code-size: 16px; }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: var(--bg);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+  line-height: 1.55;
   color: var(--text);
-  font-size: 16px;
-  line-height: 1.5;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  overflow: hidden;
 }
-button { font: inherit; color: inherit; }
-a { color: var(--accent-2); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+a { color: var(--accent); }
+code, kbd, pre { font-family: var(--mono); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon { width: 22px; height: 22px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.icon.sm { width: 18px; height: 18px; }
 
+/* Layout */
 #app {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  height: 100dvh;
+  grid-template-areas: "top" "main" "nav";
   height: 100vh;
+  height: 100dvh;
 }
 
-/* Top bar */
-header.topbar {
-  padding: calc(var(--safe-top) + 14px) 16px 12px;
-  background: linear-gradient(180deg, var(--bg-2), var(--bg));
-  border-bottom: 1px solid var(--line);
+.topbar {
+  grid-area: top;
   display: flex;
   align-items: center;
   gap: 10px;
-  position: sticky; top: 0; z-index: 5;
+  min-height: 52px;
+  padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 16px) 8px calc(var(--safe-left) + 16px);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
-header.topbar .logo {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  display: grid; place-items: center;
-  font-weight: 800; color: #0b1020; font-size: 12px;
-  flex-shrink: 0;
-}
-header.topbar h1 {
-  font-size: 1.05rem; font-weight: 700; margin: 0; flex: 1;
-  letter-spacing: 0.2px;
-}
-header.topbar .xp {
-  font-size: 0.78rem; color: var(--muted); padding: 4px 10px;
-  background: var(--panel); border-radius: 999px; border: 1px solid var(--line);
+.topbar .mark { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; }
+.topbar h1 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.topbar .icon-btn[hidden], .topbar .mark[hidden] { display: none; }
 
-/* Main scroll area */
 main {
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding: 14px 14px calc(var(--safe-bot) + 18px);
-  scrollbar-width: thin;
+  grid-area: main;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
-main::-webkit-scrollbar { width: 6px; }
-main::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
-
-.view { display: none; animation: fade .18s ease; }
+.view {
+  display: none;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px calc(var(--safe-right) + 16px) 32px calc(var(--safe-left) + 16px);
+}
 .view.active { display: block; }
-@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* Bottom nav */
-nav.bottom {
+nav.tabs {
+  grid-area: nav;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: var(--bg-2);
-  border-top: 1px solid var(--line);
-  padding-bottom: var(--safe-bot);
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }
-nav.bottom button {
-  background: none; border: 0;
-  padding: 10px 4px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color .15s;
+nav.tabs a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px 6px;
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
 }
-nav.bottom button.active { color: var(--accent-2); }
-nav.bottom button .icon { font-size: 1.25rem; line-height: 1; }
-nav.bottom button .lbl { font-size: 0.7rem; font-weight: 600; }
+nav.tabs a.active { color: var(--accent); }
 
-/* Cards */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-.card h2 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; }
-.card p { margin: 0; color: var(--muted); font-size: 0.88rem; }
-
-.module {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-.module-head {
-  padding: 14px;
-  display: flex; align-items: center; gap: 10px;
-  cursor: pointer; user-select: none;
-}
-.module-head .num {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: var(--panel-2); display: grid; place-items: center;
-  font-weight: 700; font-size: 0.9rem;
-  flex-shrink: 0;
-}
-.module-head .meta { flex: 1; min-width: 0; }
-.module-head .title { font-weight: 700; font-size: 0.95rem; }
-.module-head .sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-.module-head .chev { color: var(--muted); transition: transform .2s; }
-.module.open .chev { transform: rotate(90deg); }
-.module-body { display: none; border-top: 1px solid var(--line); }
-.module.open .module-body { display: block; }
-.lesson-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-}
-.lesson-row:last-child { border-bottom: 0; }
-.lesson-row:active { background: var(--panel-2); }
-.lesson-row .check {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 1.5px solid var(--line);
-  display: grid; place-items: center;
-  font-size: 0.75rem; flex-shrink: 0;
-}
-.lesson-row.done .check { background: var(--good); border-color: var(--good); color: #0b1020; }
-.lesson-row .ltitle { flex: 1; font-size: 0.9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lesson-row .lbadge { font-size: 0.7rem; color: var(--muted); }
-
-/* Lesson view */
-.lesson-page h2 { font-size: 1.3rem; margin: 4px 0 4px; }
-.lesson-page .crumbs { color: var(--muted); font-size: 0.78rem; margin-bottom: 10px; }
-.lesson-page .body { font-size: 0.95rem; }
-.lesson-page .body p { margin: 0 0 10px; color: #cfd6f5; }
-.lesson-page .body ul { padding-left: 20px; margin: 0 0 10px; color: #cfd6f5; }
-.lesson-page .body li { margin: 4px 0; }
-.lesson-page .body code,
-.lesson-page .body kbd {
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.85em;
-}
-.lesson-page .body h3 {
-  font-size: 1rem; margin: 14px 0 6px; color: var(--accent-2);
-}
-.lesson-page .body .callout {
-  background: var(--panel-2); border-left: 3px solid var(--accent-2);
-  padding: 10px 12px; border-radius: 6px; margin: 10px 0;
-  font-size: 0.88rem;
+@media (min-width: 900px) {
+  #app {
+    grid-template-columns: 200px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "top top" "nav main";
+  }
+  nav.tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 10px;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+  }
+  nav.tabs a {
+    flex-direction: row;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: var(--fs-base);
+  }
+  nav.tabs a:hover { background: var(--surface-2); color: var(--text); }
+  nav.tabs a.active { background: var(--accent-soft); color: var(--accent); }
+  .view { padding-top: 24px; }
 }
 
-pre.code {
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
-  overflow-x: auto;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  margin: 10px 0;
-}
-pre.code .kw { color: #c084fc; }
-pre.code .ty { color: #22d3ee; }
-pre.code .st { color: #fbbf24; }
-pre.code .nm { color: #f472b6; }
-pre.code .cm { color: #6b7a9f; font-style: italic; }
-pre.code .pp { color: #a3e635; }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--accent); color: #fff;
-  border: 0; border-radius: 10px;
-  padding: 11px 16px; font-weight: 600; font-size: 0.9rem;
-  cursor: pointer;
-}
-.btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
-.btn.success { background: var(--good); color: #0b1020; }
-.btn:active { transform: scale(0.97); }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
-
-.exercise {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
-  margin: 14px 0;
-}
-.exercise h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--warn); }
-.exercise .prompt { font-size: 0.88rem; color: #cfd6f5; margin-bottom: 10px; }
-
-.editor-wrap {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #282a36;
-}
-.editor-wrap .CodeMirror { height: auto; min-height: 180px; font-size: 0.85rem; }
-
-.io-block {
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 10px 0;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.82rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-  min-height: 40px;
-  max-height: 280px;
-  overflow-y: auto;
-}
-.io-block.bad { border-color: var(--bad); }
-.io-block.good { border-color: var(--good); }
-
-.io-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
-
-textarea.stdin {
-  width: 100%; min-height: 60px; resize: vertical;
-  background: var(--code-bg); color: var(--text);
-  border: 1px solid var(--line); border-radius: 8px;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.82rem; padding: 8px;
+/* Type */
+h2 { font-size: var(--fs-lg); line-height: 1.25; margin: 0 0 4px; font-weight: 650; letter-spacing: -0.01em; }
+h3 { font-size: var(--fs-md); margin: 24px 0 8px; font-weight: 600; }
+.muted { color: var(--text-2); }
+.small { font-size: var(--fs-sm); }
+.section-label {
+  margin: 24px 0 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
 }
 
-/* Progress bar */
-.progress-bar {
-  height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden;
-}
-.progress-bar > span {
-  display: block; height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  transition: width .3s;
-}
-
-.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.stat-grid .stat {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 14px;
-}
-.stat .num { font-size: 1.6rem; font-weight: 800; color: var(--accent-2); }
-.stat .lbl { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-
-.badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.badge {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 12px 8px; text-align: center;
-}
-.badge.locked { opacity: 0.4; }
-.badge .ico { font-size: 1.6rem; }
-.badge .nm { font-size: 0.72rem; margin-top: 4px; color: var(--muted); }
-
-/* Reference */
-.ref-section h3 {
-  margin: 14px 0 6px; font-size: 0.95rem; color: var(--accent-2);
-}
-.ref-section .pair {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px 12px; margin-bottom: 6px;
-}
-.ref-section .pair code {
-  display: block;
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.82rem;
-  color: var(--accent-2);
-  margin-bottom: 2px;
-}
-.ref-section .pair .desc { font-size: 0.78rem; color: var(--muted); }
-
-/* Toolbar in IDE */
-.ide-toolbar {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.ide-toolbar select {
-  background: var(--panel-2); color: var(--text);
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 8px 10px; font-size: 0.85rem;
-  flex: 1; min-width: 140px;
-}
-
-.toast {
-  position: fixed; left: 50%; bottom: calc(80px + var(--safe-bot)); transform: translateX(-50%);
-  background: var(--panel-2); color: var(--text);
-  border: 1px solid var(--line); border-radius: 10px;
-  padding: 10px 14px; font-size: 0.85rem;
-  z-index: 100; opacity: 0; transition: opacity .25s, transform .25s;
-  pointer-events: none;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
-.toast.good { border-color: var(--good); }
-.toast.bad { border-color: var(--bad); }
-
-.back-btn {
-  background: none; border: 0; color: var(--accent-2);
-  font-size: 0.88rem; padding: 4px 0; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 4px;
-  margin-bottom: 4px;
-}
-
-.search-bar {
-  width: 100%; padding: 10px 12px; margin-bottom: 12px;
-  background: var(--panel); color: var(--text);
-  border: 1px solid var(--line); border-radius: 10px;
-  font-size: 0.9rem;
-}
-
-.greet {
-  background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(34,211,238,0.10));
-  border: 1px solid var(--line);
-  border-radius: 14px;
+/* Surfaces */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 12px;
 }
-.greet h2 { font-size: 1.1rem; margin: 0 0 4px; }
-.greet p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.panel > h2 { font-size: var(--fs-md); }
+.panel p { margin: 0; }
 
-@media (min-width: 720px) {
-  #app { max-width: 720px; margin: 0 auto; box-shadow: 0 0 0 1px var(--line); }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn.secondary:hover { background: var(--surface-2); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn .icon { width: 16px; height: 16px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.btn-row .spacer { flex: 1; }
+@media (max-width: 480px) {
+  .btn-row { gap: 6px; }
+  .btn-row .btn { padding: 0 12px; }
+  .btn-row .spacer { display: none; }
+}
+
+/* Inputs */
+.field {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 16px;
+}
+textarea.field { min-height: 64px; resize: vertical; font-family: var(--mono); font-size: max(16px, var(--code-size)); line-height: 1.45; }
+select.field { appearance: none; -webkit-appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; background-size: 18px; }
+
+/* Learn */
+.continue { display: flex; align-items: center; gap: 12px; }
+.continue .text { flex: 1; min-width: 0; }
+.continue .text .muted { font-size: var(--fs-sm); }
+.continue .text strong { display: block; font-size: var(--fs-md); }
+.overall { margin-top: 14px; }
+.overall .small { margin-top: 6px; }
+
+.module {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.module-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.module-head .num {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
+}
+.module.complete .num { background: var(--ok-soft); color: var(--ok); }
+.module-head .meta { flex: 1; min-width: 0; }
+.module-head .title { display: block; font-weight: 600; }
+.module-head .sub { display: block; font-size: var(--fs-sm); color: var(--text-2); }
+.module-head .count { font-size: var(--fs-sm); color: var(--text-2); white-space: nowrap; }
+.module-head .chev { color: var(--text-2); transition: transform .15s; }
+.module.open .chev { transform: rotate(90deg); }
+.module-body { display: none; border-top: 1px solid var(--border); }
+.module.open .module-body { display: block; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+}
+.row:last-child { border-bottom: 0; }
+.row:hover, .row:active { background: var(--surface-2); }
+.row .status {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  color: transparent;
+  flex-shrink: 0;
+}
+.row.done .status { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.row .status .icon { width: 14px; height: 14px; stroke-width: 2.5; }
+.row .label { flex: 1; min-width: 0; }
+.row .tag { font-size: var(--fs-sm); color: var(--text-2); }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.empty { padding: 24px 0; text-align: center; color: var(--text-2); }
+
+/* Lesson */
+.crumbs { font-size: var(--fs-sm); color: var(--text-2); margin-bottom: 4px; }
+.prose { font-size: 1rem; }
+.prose p, .prose ul { margin: 0 0 12px; }
+.prose ul { padding-left: 22px; }
+.prose li { margin: 4px 0; }
+.prose code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 0.875em;
+}
+.prose .callout {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--accent-soft);
+  font-size: var(--fs-base);
+}
+pre.code {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+pre.code .kw { color: var(--tok-keyword); }
+pre.code .ty { color: var(--tok-type); }
+pre.code .cm { color: var(--tok-comment); font-style: italic; }
+
+.exercise {
+  margin-top: 28px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.exercise .prompt { margin: 0 0 12px; }
+.exercise .prompt code { padding: 1px 5px; border-radius: 4px; background: var(--surface-2); font-size: 0.875em; }
+.hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+}
+.hint code { font-size: 1em; }
+
+.pager { display: flex; gap: 8px; margin-top: 32px; }
+.pager .btn { flex: 1; }
+
+/* Editor */
+.editor {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--code-bg);
+}
+.editor .CodeMirror {
+  height: auto;
+  min-height: 120px;
+  font-family: var(--mono);
+  font-size: var(--code-size);
+  line-height: 1.5;
+}
+.editor.tall .CodeMirror { min-height: 300px; }
+.editor .CodeMirror-scroll { min-height: inherit; }
+.cm-s-academy.CodeMirror { background: var(--code-bg); color: var(--text); }
+.cm-s-academy .CodeMirror-gutters { background: var(--code-bg); border-right: 1px solid var(--border); }
+.cm-s-academy .CodeMirror-linenumber { color: var(--text-2); opacity: .7; }
+.cm-s-academy .CodeMirror-cursor { border-left: 2px solid var(--accent); }
+.cm-s-academy .CodeMirror-selected, .cm-s-academy.CodeMirror-focused .CodeMirror-selected { background: var(--accent-soft); }
+.cm-s-academy .CodeMirror-line::selection, .cm-s-academy .CodeMirror-line > span::selection, .cm-s-academy .CodeMirror-line > span > span::selection { background: var(--accent-soft); }
+.cm-s-academy .cm-keyword { color: var(--tok-keyword); }
+.cm-s-academy .cm-type, .cm-s-academy .cm-variable-3 { color: var(--tok-type); }
+.cm-s-academy .cm-string, .cm-s-academy .cm-string-2 { color: var(--tok-string); }
+.cm-s-academy .cm-number, .cm-s-academy .cm-atom { color: var(--tok-number); }
+.cm-s-academy .cm-comment { color: var(--tok-comment); font-style: italic; }
+.cm-s-academy .cm-meta { color: var(--tok-meta); }
+.cm-s-academy .cm-def { color: var(--text); font-weight: 600; }
+.cm-s-academy .CodeMirror-matchingbracket { color: inherit; background: var(--accent-soft); }
+
+/* Output */
+.output {
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  overflow: hidden;
+}
+.output .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.output .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.output.ok .status { color: var(--ok); background: var(--ok-soft); }
+.output.ok .status::before { background: var(--ok); }
+.output.err .status { color: var(--err); background: var(--err-soft); }
+.output.err .status::before { background: var(--err); }
+.output.busy .status::before { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.output pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 340px;
+  overflow: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.output .sub { padding: 8px 12px 0; font-size: var(--fs-sm); color: var(--text-2); font-weight: 600; }
+.output .sub + pre { padding-top: 4px; }
+.output .diag { color: var(--text-2); }
+.output.err .diag { color: var(--err); }
+.output .status + .note { padding-top: 10px; }
+.output .note { padding: 0 12px 10px; font-size: var(--fs-sm); color: var(--text-2); }
+.output .placeholder { padding: 10px 12px; font-size: var(--fs-sm); color: var(--text-2); }
+
+/* Practice */
+.level { font-size: var(--fs-sm); color: var(--text-2); }
+
+/* Reference */
+.ref h3 { margin-top: 20px; }
+.ref h3:first-of-type { margin-top: 4px; }
+.ref-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.ref-item:last-child { border-bottom: 0; }
+.ref-item:hover { background: var(--surface-2); }
+.ref-item code { display: block; font-size: 0.8125rem; color: var(--tok-type); white-space: pre-wrap; word-break: break-word; }
+.ref-item span { display: block; font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
+
+/* Progress */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.stat .n { font-size: var(--fs-lg); font-weight: 650; font-variant-numeric: tabular-nums; }
+.stat .l { font-size: var(--fs-sm); color: var(--text-2); }
+.mod-progress { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.mod-progress:last-child { border-bottom: 0; }
+.mod-progress .bar { grid-column: 1 / -1; }
+.mod-progress .small { color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 76px);
+  z-index: 10;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: var(--fs-sm);
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (min-width: 900px) { .toast { bottom: 24px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
 </style>
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v15H6a2 2 0 0 0-2 2v.5z"/><path d="M4 19.5A2 2 0 0 0 6 21.5h14V18"/></symbol>
+  <symbol id="i-check-square" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
 <div id="app">
   <header class="topbar">
-    <div class="logo">C++</div>
+    <button class="icon-btn" id="backBtn" aria-label="Back" hidden><svg class="icon"><use href="#i-back"/></svg></button>
+    <img class="mark" id="mark" src="icon.svg" alt="" />
     <h1 id="topTitle">C++ Academy</h1>
-    <div class="xp" id="xpBadge">0 XP</div>
   </header>
 
   <main id="main">
-    <!-- LEARN -->
-    <section id="view-learn" class="view active">
-      <div class="greet">
-        <h2 id="greetTitle">Welcome, future C++ wizard</h2>
-        <p id="greetText">Tap a lesson to start. Each one ends with a runnable challenge.</p>
-        <div style="margin-top:10px;">
-          <div class="progress-bar"><span id="overallBar" style="width:0%"></span></div>
-          <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;" id="overallText">0 of 0 lessons complete</div>
+    <section id="view-learn" class="view">
+      <div class="panel">
+        <div class="continue">
+          <div class="text">
+            <div class="muted" id="continueLabel">Start here</div>
+            <strong id="continueTitle"></strong>
+          </div>
+          <a class="btn" id="continueBtn" href="#">Open</a>
+        </div>
+        <div class="overall">
+          <div class="bar"><span id="overallBar" style="width:0%"></span></div>
+          <div class="small muted" id="overallText"></div>
         </div>
       </div>
-      <input class="search-bar" id="lessonSearch" placeholder="Search lessons…" />
+      <input class="field" id="lessonSearch" type="search" placeholder="Search lessons" aria-label="Search lessons" autocomplete="off" style="margin-bottom:12px" />
       <div id="moduleList"></div>
     </section>
 
-    <!-- LESSON DETAIL -->
     <section id="view-lesson" class="view">
-      <button class="back-btn" id="lessonBack">← Back to lessons</button>
-      <div class="lesson-page">
-        <div class="crumbs" id="lessonCrumbs"></div>
-        <h2 id="lessonTitle"></h2>
-        <div class="body" id="lessonBody"></div>
+      <div class="crumbs" id="lessonCrumbs"></div>
+      <h2 id="lessonTitle"></h2>
+      <div class="prose" id="lessonBody"></div>
 
-        <h3 style="margin-top:14px;color:var(--accent-2);font-size:0.95rem;">Example</h3>
-        <div class="editor-wrap"><textarea id="lessonExample"></textarea></div>
-        <div class="btn-row">
-          <button class="btn" id="lessonRun">▶ Run example</button>
-          <button class="btn secondary" id="lessonReset">Reset</button>
-        </div>
-        <div class="io-label">Output</div>
-        <div class="io-block" id="lessonOutput">—</div>
-
-        <div class="exercise" id="lessonExerciseBox" style="display:none;">
-          <h3>🎯 Challenge</h3>
-          <div class="prompt" id="lessonPrompt"></div>
-          <div class="editor-wrap"><textarea id="lessonExerciseEditor"></textarea></div>
-          <div class="io-label" id="stdinLbl" style="margin-top:10px;display:none;">Stdin (one input per line)</div>
-          <textarea class="stdin" id="lessonStdin" style="display:none;"></textarea>
-          <div class="btn-row">
-            <button class="btn" id="lessonCheck">✓ Check</button>
-            <button class="btn secondary" id="lessonHint">💡 Hint</button>
-            <button class="btn secondary" id="lessonShowSol">Show solution</button>
-          </div>
-          <div class="io-label">Your output</div>
-          <div class="io-block" id="lessonExOut">—</div>
-          <div class="io-label" style="margin-top:6px;">Expected</div>
-          <div class="io-block" id="lessonExExpected">—</div>
-        </div>
-
-        <div class="btn-row" style="margin-top:14px;">
-          <button class="btn secondary" id="lessonPrev">← Previous</button>
-          <button class="btn" id="lessonNext">Next →</button>
-        </div>
+      <div class="section-label">Example</div>
+      <div class="editor"><textarea id="exampleEditor"></textarea></div>
+      <div id="exampleStdinWrap" hidden>
+        <div class="section-label">Input</div>
+        <textarea class="field" id="exampleStdin" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
       </div>
-    </section>
-
-    <!-- CODE / IDE -->
-    <section id="view-code" class="view">
-      <div class="card">
-        <h2>In-browser C++ IDE</h2>
-        <p>Write, compile, and run real C++ right here. Powered by JSCPP — runs entirely on your device.</p>
-      </div>
-      <div class="ide-toolbar">
-        <select id="ideTemplate">
-          <option value="">Templates…</option>
-          <option value="hello">Hello, World!</option>
-          <option value="vars">Variables &amp; arithmetic</option>
-          <option value="loop">For loop &amp; sum</option>
-          <option value="vector">std::vector</option>
-          <option value="class">Class &amp; method</option>
-          <option value="fizz">FizzBuzz</option>
-          <option value="prime">Prime checker</option>
-          <option value="sort">Sort with std::sort</option>
-        </select>
-        <button class="btn secondary" id="ideSave">💾 Save</button>
-      </div>
-      <div class="editor-wrap"><textarea id="ideEditor"></textarea></div>
       <div class="btn-row">
-        <button class="btn" id="ideRun">▶ Run</button>
-        <button class="btn secondary" id="ideClear">Clear output</button>
+        <button class="btn" id="exampleRun"><svg class="icon"><use href="#i-play"/></svg>Run</button>
+        <button class="btn secondary" id="exampleReset">Reset</button>
       </div>
-      <div class="io-label">Stdin (each line is one input)</div>
-      <textarea class="stdin" id="ideStdin" placeholder="Type input here if your program reads with std::cin…"></textarea>
-      <div class="io-label" style="margin-top:10px;">Output</div>
-      <div class="io-block" id="ideOutput">Press Run to compile &amp; execute.</div>
+      <div class="output" id="exampleOutput"></div>
+
+      <div id="lessonExercise"></div>
+
+      <div class="pager">
+        <a class="btn secondary" id="lessonPrev" href="#">Previous</a>
+        <a class="btn" id="lessonNext" href="#">Next lesson</a>
+      </div>
     </section>
 
-    <!-- PRACTICE -->
     <section id="view-practice" class="view">
-      <div class="card">
-        <h2>Practice arena</h2>
-        <p>Bite-size challenges. Solve them, level up. Difficulty grows as you progress.</p>
-      </div>
-      <div id="practiceList"></div>
+      <p class="muted" style="margin:0 0 12px">Short problems to try once you have finished the matching lessons. Each one is checked against several inputs.</p>
+      <div class="list" id="practiceList"></div>
     </section>
 
-    <!-- REFERENCE -->
+    <section id="view-problem" class="view">
+      <div class="crumbs" id="problemLevel"></div>
+      <h2 id="problemTitle"></h2>
+      <div id="problemExercise"></div>
+    </section>
+
+    <section id="view-code" class="view">
+      <p class="muted small" style="margin:0 0 12px">Code is compiled with GCC 13 (C++20) on wandbox.org, so running it needs an internet connection. Your code is saved on this device as you type.</p>
+      <select class="field" id="ideTemplate" aria-label="Load an example program" style="margin-bottom:12px">
+        <option value="">Load an example program…</option>
+      </select>
+      <div class="editor tall"><textarea id="ideEditor"></textarea></div>
+      <div class="section-label">Input</div>
+      <textarea class="field" id="ideStdin" rows="2" placeholder="Anything your program reads with std::cin" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="ideRun"><svg class="icon"><use href="#i-play"/></svg>Run</button>
+      </div>
+      <div class="output" id="ideOutput"></div>
+    </section>
+
     <section id="view-ref" class="view">
-      <div class="card">
-        <h2>Quick reference</h2>
-        <p>Cheatsheet of the C++ you'll use day to day. Tap any item to copy.</p>
-      </div>
-      <div id="refContent"></div>
+      <p class="muted" style="margin:0 0 4px">Tap an entry to copy it.</p>
+      <div class="ref" id="refContent"></div>
     </section>
 
-    <!-- PROGRESS -->
     <section id="view-progress" class="view">
-      <div class="stat-grid">
-        <div class="stat"><div class="num" id="pXp">0</div><div class="lbl">Total XP</div></div>
-        <div class="stat"><div class="num" id="pLessons">0</div><div class="lbl">Lessons done</div></div>
-        <div class="stat"><div class="num" id="pStreak">0</div><div class="lbl">Day streak</div></div>
-        <div class="stat"><div class="num" id="pSolved">0</div><div class="lbl">Challenges solved</div></div>
+      <div class="stats">
+        <div class="stat"><div class="n" id="statLessons">0</div><div class="l">Lessons</div></div>
+        <div class="stat"><div class="n" id="statPractice">0</div><div class="l">Practice</div></div>
+        <div class="stat"><div class="n" id="statStreak">0</div><div class="l">Day streak</div></div>
       </div>
-      <div class="card">
-        <h2>Course completion</h2>
-        <div class="progress-bar" style="margin-top:8px;"><span id="pBar" style="width:0%"></span></div>
-        <p style="margin-top:6px;font-size:0.8rem;color:var(--muted);" id="pBarText">0%</p>
+      <div class="panel">
+        <h2>By module</h2>
+        <div id="moduleProgress"></div>
       </div>
-      <div class="card">
-        <h2>Badges</h2>
-        <div class="badge-grid" id="badgeGrid"></div>
-      </div>
-      <div class="card">
-        <h2>Reset progress</h2>
-        <p>Clear all saved lessons, snippets, and XP.</p>
-        <div class="btn-row" style="margin-top:8px;">
-          <button class="btn secondary" id="resetProgress">Reset everything</button>
+      <div class="panel">
+        <h2>Reset</h2>
+        <p class="muted">Clears completed lessons, practice, and saved code on this device.</p>
+        <div class="btn-row" style="margin-bottom:0">
+          <button class="btn secondary" id="resetProgress">Reset progress</button>
         </div>
       </div>
     </section>
   </main>
 
-  <nav class="bottom" id="nav">
-    <button data-tab="learn" class="active"><span class="icon">📚</span><span class="lbl">Learn</span></button>
-    <button data-tab="code"><span class="icon">💻</span><span class="lbl">Code</span></button>
-    <button data-tab="practice"><span class="icon">🎯</span><span class="lbl">Practice</span></button>
-    <button data-tab="ref"><span class="icon">📖</span><span class="lbl">Reference</span></button>
-    <button data-tab="progress"><span class="icon">📊</span><span class="lbl">Progress</span></button>
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <a href="#/learn" data-tab="learn"><svg class="icon"><use href="#i-book"/></svg><span>Learn</span></a>
+    <a href="#/practice" data-tab="practice"><svg class="icon"><use href="#i-check-square"/></svg><span>Practice</span></a>
+    <a href="#/code" data-tab="code"><svg class="icon"><use href="#i-code"/></svg><span>Code</span></a>
+    <a href="#/reference" data-tab="ref"><svg class="icon"><use href="#i-list"/></svg><span>Reference</span></a>
+    <a href="#/progress" data-tab="progress"><svg class="icon"><use href="#i-chart"/></svg><span>Progress</span></a>
   </nav>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jscpp@2.1.0/dist/JSCPP.es5.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="curriculum.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
