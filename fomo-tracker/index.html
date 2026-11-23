@@ -3,192 +3,214 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FOMO Radar — Meme Coin Screener</title>
+<title>FOMO Radar · DEX pool screener</title>
+<meta name="description" content="Screener for new and trending DEX pools on Solana, Base, Ethereum and BNB Chain, with momentum and rug-risk scores computed from public pool data." />
 <style>
+  :root {
+    --bg: #f6f6f4;
+    --surface: #ffffff;
+    --surface-2: #f0f0ed;
+    --border: #dddcd7;
+    --text: #1b1b1a;
+    --muted: #6a6a66;
+    --accent: #1f5fbf;
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --bad: #c62828;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121314;
+      --surface: #191a1c;
+      --surface-2: #212225;
+      --border: #2e3034;
+      --text: #e6e6e3;
+      --muted: #9b9c98;
+      --accent: #6aa3f0;
+      --ok: #3fb950;
+      --warn: #d29922;
+      --bad: #f2564d;
+      color-scheme: dark;
+    }
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: #0b0f1a;
-    --panel: #131a2b;
-    --panel-2: #1a2338;
-    --border: #263352;
-    --text: #e6ecf7;
-    --muted: #8b9bb8;
-    --green: #22c55e;
-    --red: #ef4444;
-    --amber: #f59e0b;
-    --accent: #7c8cff;
-    --accent-2: #b57cff;
-  }
-
   body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: radial-gradient(1200px 600px at 70% -10%, #1a1440 0%, var(--bg) 55%);
+    font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
-    padding: 28px 16px 60px;
+    padding: 24px 16px 48px;
   }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  a { color: var(--accent); }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  .wrap { max-width: 1180px; margin: 0 auto; }
-
-  header { text-align: center; margin-bottom: 22px; }
-  h1 {
-    font-size: 2.1rem; font-weight: 800; letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #ffd77c, #ff7c9c 45%, var(--accent-2));
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+  header { margin-bottom: 14px; }
+  h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { color: var(--muted); margin-top: 2px; max-width: 760px; }
 
   .disclaimer {
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    color: #fbd38d;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.8rem;
-    line-height: 1.5;
-    margin: 16px auto 22px;
+    border-left: 3px solid var(--warn);
+    background: var(--surface);
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
     max-width: 900px;
   }
 
-  /* ---------- controls ---------- */
+  /* controls */
   .controls {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    display: flex; flex-wrap: wrap; gap: 14px 22px;
-    align-items: flex-end;
-    margin-bottom: 18px;
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; margin-bottom: 10px;
   }
-  .ctrl { display: flex; flex-direction: column; gap: 6px; }
-  .ctrl label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
-  .ctrl select, .ctrl input[type=number] {
-    background: var(--panel-2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 10px; font-size: 0.9rem; min-width: 110px;
+  .ctrl { display: flex; flex-direction: column; gap: 4px; }
+  .ctrl > label, .ctrl > .label { font-size: 0.75rem; color: var(--muted); }
+  select, button { font: inherit; color: inherit; }
+  select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px 6px; min-width: 96px;
   }
-  .chains { display: flex; gap: 8px; flex-wrap: wrap; }
-  .chip-toggle {
-    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
-    border-radius: 20px; padding: 7px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
-    transition: all 0.15s;
+  .chains { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .chains button {
+    background: var(--surface); border: 0; border-left: 1px solid var(--border);
+    padding: 5px 10px; cursor: pointer; color: var(--muted);
   }
-  .chip-toggle.on { background: #2b2670; border-color: var(--accent); color: #cdd5ff; }
-
+  .chains button:first-child { border-left: 0; }
+  .chains button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
   .btn {
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    border: none; color: #fff; font-weight: 700; font-size: 0.9rem;
-    border-radius: 9px; padding: 10px 18px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px 12px; cursor: pointer;
   }
-  .btn:disabled { opacity: 0.5; cursor: wait; }
-  .btn.ghost { background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
-  .btn.ghost.on { color: #a7f3d0; border-color: #14532d; background: rgba(34,197,94,0.08); }
+  .btn:hover { border-color: var(--accent); }
+  .btn:disabled { opacity: 0.55; cursor: default; border-color: var(--border); }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; }
+  .check input { accent-color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-  .statusbar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; color: var(--muted); font-size: 0.82rem; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; }
-  .dot.err { background: var(--red); }
-
-  /* ---------- cards ---------- */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
-
-  .coin {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    display: flex; flex-direction: column; gap: 12px;
-    position: relative;
-    transition: border-color 0.15s, transform 0.15s;
+  .statusbar {
+    display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center;
+    font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; min-height: 1.4em;
   }
-  .coin:hover { border-color: #3b4c78; transform: translateY(-2px); }
+  .statusbar .err { color: var(--bad); }
 
-  .coin-top { display: flex; align-items: center; gap: 10px; }
-  .rank { font-size: 0.75rem; font-weight: 800; color: #5b6b8f; min-width: 26px; }
-  .sym { font-size: 1.12rem; font-weight: 800; }
-  .name { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
-  .badges { margin-left: auto; display: flex; gap: 6px; align-items: center; }
-  .chain-badge {
-    font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 12px;
-    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+  /* table */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; font-size: 0.75rem; color: var(--muted); background: var(--surface-2); }
+  th.l, td.l { text-align: left; }
+  tbody tr.row:hover td { background: var(--surface-2); }
+  td { font-variant-numeric: tabular-nums; }
+  .rank { color: var(--muted); width: 1%; }
+  .tok { min-width: 130px; max-width: 190px; }
+  td sub { font-size: 0.72em; vertical-align: -0.2em; line-height: 0; }
+  .tok .sym { font-weight: 600; }
+  .tok .sub { display: block; font-size: 0.75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .neg { color: var(--muted); }
+  .score { display: inline-flex; align-items: center; gap: 6px; }
+  .bar { width: 40px; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--accent); }
+  .risk { display: inline-flex; align-items: center; gap: 5px; }
+  .risk::before { content: ""; width: 8px; height: 8px; border-radius: 1px; background: currentColor; }
+  .risk.low { color: var(--ok); }
+  .risk.med { color: var(--warn); }
+  .risk.high { color: var(--bad); }
+  .toggle {
+    background: none; border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 8px; cursor: pointer; font-size: 0.78rem; color: var(--muted);
   }
-  .hype { font-size: 0.9rem; }
+  .toggle[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
 
-  .fomo-row { display: flex; align-items: center; gap: 12px; }
-  .fomo-score { font-size: 1.7rem; font-weight: 800; line-height: 1; }
-  .fomo-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
-  .meter { flex: 1; height: 8px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
-  .meter > div { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #fbbf24, #fb7185, #c084fc); }
+  tr.detail td { text-align: left; white-space: normal; background: var(--surface-2); padding: 12px; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 24px; }
+  .detail-grid h3 { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 0.82rem; }
+  .kv dd { text-align: right; font-variant-numeric: tabular-nums; }
+  ul.checks { list-style: none; font-size: 0.82rem; display: grid; gap: 3px; }
+  ul.checks li { display: grid; grid-template-columns: 34px 1fr; gap: 6px; }
+  ul.checks .pts { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  ul.checks .bad .pts { color: var(--bad); }
+  ul.checks .ok .pts { color: var(--ok); }
+  .addr { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78rem; word-break: break-all; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 0.85rem; }
 
-  .safety {
-    font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+  .state-row td { text-align: center; padding: 40px 16px; color: var(--muted); white-space: normal; }
+  .state-row.err td { color: var(--bad); }
+
+  /* methodology */
+  details.method {
+    margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 14px; font-size: 0.88rem;
   }
-  .safety.low  { background: rgba(34,197,94,0.12); color: #86efac; border: 1px solid rgba(34,197,94,0.4); }
-  .safety.med  { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.4); }
-  .safety.high { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+  details.method summary { cursor: pointer; font-weight: 600; }
+  details.method h2 { font-size: 0.9rem; margin: 14px 0 4px; }
+  details.method p, details.method ul { max-width: 820px; }
+  details.method ul { padding-left: 18px; }
+  details.method li { margin: 2px 0; }
+  details.method table { width: auto; font-size: 0.82rem; margin-top: 4px; }
+  details.method table td, details.method table th { padding: 3px 10px; }
 
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .stat { background: var(--panel-2); border-radius: 9px; padding: 8px 10px; }
-  .stat .k { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .stat .v { font-size: 0.9rem; font-weight: 700; }
+  footer { margin-top: 20px; font-size: 0.8rem; color: var(--muted); }
 
-  .changes { display: flex; gap: 6px; flex-wrap: wrap; }
-  .pc { font-size: 0.75rem; font-weight: 700; padding: 4px 9px; border-radius: 8px; background: var(--panel-2); }
-  .pc.up { color: #86efac; } .pc.down { color: #fca5a5; }
-  .pc span { color: var(--muted); font-weight: 600; margin-right: 4px; }
-
-  .holders { font-size: 0.8rem; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .holders b { color: var(--text); }
-  .trend-up { color: #86efac; font-weight: 700; }
-  .trend-flat { color: var(--muted); }
-
-  .flags { display: none; flex-direction: column; gap: 5px; border-top: 1px dashed var(--border); padding-top: 10px; }
-  .coin.open .flags { display: flex; }
-  .flag { font-size: 0.76rem; line-height: 1.4; }
-  .flag.bad::before { content: "⚠️ "; }
-  .flag.good::before { content: "✅ "; }
-
-  .links { display: flex; gap: 8px; flex-wrap: wrap; }
-  .links a {
-    font-size: 0.74rem; font-weight: 700; color: #aab8ff; text-decoration: none;
-    background: var(--panel-2); border: 1px solid var(--border); padding: 5px 10px; border-radius: 8px;
+  /* phone: each table row becomes a compact block */
+  @media (max-width: 760px) {
+    body { padding: 16px 16px 40px; }
+    h1 { font-size: 1.3rem; }
+    .actions { margin-left: 0; width: 100%; justify-content: space-between; }
+    .ctrl { flex: 1 1 140px; }
+    .ctrl.chains-ctrl { flex-basis: 100%; }
+    .chains { width: 100%; }
+    .chains button { flex: 1; padding: 7px 4px; }
+    select { width: 100%; padding: 7px 6px; }
+    .btn { padding: 7px 14px; }
+    .table-wrap { overflow: visible; }
+    table, tbody { display: block; }
+    thead { display: none; }
+    tr.row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px;
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+    }
+    tr.row td { border: 0; padding: 0; text-align: left; white-space: normal; }
+    tr.row td[data-label]::before { content: attr(data-label); display: block; font-size: 0.7rem; color: var(--muted); }
+    tr.row td.rank { display: none; }
+    tr.row td.tok { grid-column: 1 / 3; max-width: none; }
+    tr.row td.tog { grid-column: 3; text-align: right; align-self: start; }
+    tr.row td.opt { display: none; }
+    tbody tr.row:hover td { background: none; }
+    tr.detail { display: block; }
+    tr.detail td { display: block; border: 0; border-bottom: 1px solid var(--border); }
+    .state-row, .state-row td { display: block; }
+    .toggle { padding: 5px 10px; }
   }
-  .links a:hover { border-color: var(--accent); }
-  .expand { margin-left: auto; font-size: 0.74rem; color: var(--muted); cursor: pointer; background: none; border: none; }
-
-  .empty, .loading { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 0.95rem; grid-column: 1/-1; }
-  .spinner {
-    width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--accent);
-    border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  footer { text-align: center; margin-top: 40px; color: #45536f; font-size: 0.78rem; line-height: 1.7; }
-  footer a { color: #6b7fb8; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <h1>🚀 FOMO Radar</h1>
-    <p class="subtitle">Live screener for new low-cap meme coins with rapid momentum, growing buyers, and rug-risk checks</p>
+    <h1>FOMO Radar</h1>
+    <p class="subtitle">New and trending DEX pools on Solana, Base, Ethereum and BNB Chain, ranked by short-term momentum and checked for common rug-pull warning signs. Data from GeckoTerminal, refreshed every 60 seconds.</p>
   </header>
 
-  <div class="disclaimer">
-    <b>⚠️ Not financial advice.</b> Meme coins are extremely high risk — most go to zero. The "rug risk" checks here are
-    <b>heuristics only</b>: they can flag obvious red flags (no sells, tiny liquidity, brand-new pools) but <b>cannot guarantee any
-    token is safe</b>. Contracts can hide mint/blacklist functions this tool can't see. Always verify with the audit links on each
-    card and never invest more than you can afford to lose.
-  </div>
+  <p class="disclaimer">
+    <strong>Not financial advice.</strong> Most newly launched tokens lose nearly all of their value. The risk score only
+    looks at pool data (liquidity, trades, age). It cannot see the contract itself, such as mint or blacklist functions or
+    whether liquidity is locked. Use the RugCheck, Honeypot.is and GoPlus links in each row's details before trusting a token.
+  </p>
 
   <div class="controls">
-    <div class="ctrl">
-      <label>Chains</label>
-      <div class="chains" id="chains"></div>
+    <div class="ctrl chains-ctrl">
+      <span class="label" id="chainsLabel">Chains</span>
+      <div class="chains" id="chains" role="group" aria-labelledby="chainsLabel"></div>
     </div>
     <div class="ctrl">
-      <label>Max Market Cap</label>
+      <label for="maxMc">Max market cap</label>
       <select id="maxMc">
         <option value="1000000">$1M</option>
         <option value="5000000" selected>$5M</option>
@@ -198,8 +220,9 @@
       </select>
     </div>
     <div class="ctrl">
-      <label>Min Liquidity</label>
+      <label for="minLiq">Min liquidity</label>
       <select id="minLiq">
+        <option value="0">Any</option>
         <option value="5000">$5k</option>
         <option value="10000" selected>$10k</option>
         <option value="25000">$25k</option>
@@ -208,62 +231,135 @@
       </select>
     </div>
     <div class="ctrl">
-      <label>Min Buyers (24h)</label>
+      <label for="minBuyers">Min buyers (24h)</label>
       <select id="minBuyers">
         <option value="0">Any</option>
-        <option value="25">25+</option>
-        <option value="50" selected>50+</option>
-        <option value="150">150+</option>
-        <option value="500">500+</option>
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="150">150</option>
+        <option value="500">500</option>
       </select>
     </div>
     <div class="ctrl">
-      <label>Min 1h Change</label>
+      <label for="minH1">Min 1h change</label>
       <select id="minH1">
         <option value="-Infinity">Any</option>
-        <option value="0" selected>Going up (0%+)</option>
+        <option value="0" selected>0% or more</option>
         <option value="5">+5%</option>
         <option value="20">+20%</option>
         <option value="50">+50%</option>
       </select>
     </div>
     <div class="ctrl">
-      <label>Risk Filter</label>
-      <select id="minSafety">
+      <label for="minRisk">Risk</label>
+      <select id="minRisk">
         <option value="0">Show all</option>
         <option value="45" selected>Hide high risk</option>
         <option value="70">Lower risk only</option>
       </select>
     </div>
     <div class="ctrl">
-      <label>Sort By</label>
+      <label for="sortBy">Sort by</label>
       <select id="sortBy">
-        <option value="fomo" selected>🔥 FOMO Score</option>
-        <option value="h1">1h % Gain</option>
-        <option value="buyers">Buyers 24h</option>
-        <option value="newest">Newest</option>
-        <option value="safety">Safety</option>
+        <option value="fomo" selected>FOMO score</option>
+        <option value="h1">1h change</option>
+        <option value="buyers">Buyers (24h)</option>
+        <option value="newest">Newest pool</option>
+        <option value="risk">Risk score</option>
       </select>
     </div>
-    <button class="btn" id="refreshBtn">Scan Now</button>
-    <button class="btn ghost on" id="autoBtn">Auto-refresh: ON</button>
+    <div class="actions">
+      <label class="check"><input type="checkbox" id="auto" checked /> Auto-refresh</label>
+      <button class="btn" id="refreshBtn" type="button">Refresh</button>
+    </div>
   </div>
 
-  <div class="statusbar">
-    <span id="status"><span class="dot"></span>Ready</span>
-    <span id="counts"></span>
-    <span id="updated"></span>
+  <div class="statusbar" aria-live="polite">
+    <span id="status">Loading</span>
+    <span id="counts" class="num"></span>
   </div>
 
-  <div class="grid" id="grid">
-    <div class="loading"><div class="spinner"></div>Scanning fresh pools across chains…</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th class="l">Token</th>
+          <th>Age</th>
+          <th class="l" title="Momentum score, 0 to 100. See 'How the scores work' below.">FOMO</th>
+          <th class="l" title="Pool-data risk score, 100 = no warnings. See 'How the scores work' below.">Risk</th>
+          <th>Price</th>
+          <th>5m</th>
+          <th>1h</th>
+          <th>6h</th>
+          <th>24h</th>
+          <th>Mkt cap</th>
+          <th>Liquidity</th>
+          <th>Vol 24h</th>
+          <th title="Unique buying wallets in the last 24 hours">Buyers 24h</th>
+          <th title="Unique buying wallets in the last hour">Buyers 1h</th>
+          <th><span class="sr-only">Details</span></th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr class="state-row"><td colspan="16">Loading pools…</td></tr>
+      </tbody>
+    </table>
   </div>
+
+  <details class="method">
+    <summary>How the scores work</summary>
+
+    <h2>FOMO score (0 to 100)</h2>
+    <p>A momentum score: the sum of four parts, each capped.</p>
+    <ul>
+      <li><strong>Price momentum, up to 45.</strong> The 1-hour change counts most (+150% or more earns 28 points),
+        then the 5-minute change (+50% earns 9) and the 6-hour change (+300% earns 8). Price drops subtract points.</li>
+      <li><strong>Buyers, up to 30.</strong> Up to 18 for unique buying wallets in the last 24 hours, on a log scale
+        (2,000 or more earns all 18), plus up to 12 when last-hour buyers run above the pool's average hourly rate
+        (4 times the average earns all 12). For pools younger than 24 hours the average uses the pool's real age.</li>
+      <li><strong>Buy pressure, up to 15.</strong> How far the share of buys among last-hour trades is above 50%
+        (all buys earns 15). Needs at least 5 trades in the hour, otherwise 0.</li>
+      <li><strong>Turnover, up to 10.</strong> 24-hour volume divided by market cap, or by liquidity if that is larger.
+        Volume of 2 times that value or more earns all 10.</li>
+    </ul>
+
+    <h2>Risk score (0 to 100)</h2>
+    <p>Starts at 100 and loses points for each warning below. Pools under one hour old are capped at 60, so they can
+      never show as lower risk.</p>
+    <table>
+      <thead><tr><th class="l">Warning</th><th>Points</th></tr></thead>
+      <tbody>
+        <tr><td class="l">Liquidity under $5k (under $20k)</td><td>−40 (−18)</td></tr>
+        <tr><td class="l">Liquidity under 0.5% of FDV (under 2%)</td><td>−25 (−10)</td></tr>
+        <tr><td class="l">Pool under 1 hour old (under 12 hours)</td><td>−20 (−10)</td></tr>
+        <tr><td class="l">20+ buys and zero sells in 24h (possible honeypot)</td><td>−45</td></tr>
+        <tr><td class="l">24h volume over 100 times liquidity (possible wash trading)</td><td>−15</td></tr>
+        <tr><td class="l">Fewer than 20 unique buyers in 24h</td><td>−12</td></tr>
+        <tr><td class="l">Over 75% of 24h trades are sells (with 50+ trades)</td><td>−12</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:6px">Bands: 70 and above is <span class="risk low">lower risk</span>, 45 to 69 is
+      <span class="risk med">caution</span>, below 45 is <span class="risk high">high risk</span>.</p>
+
+    <h2>Data notes</h2>
+    <ul>
+      <li>Each refresh loads page 1 of GeckoTerminal's new pools and trending pools for every selected chain
+        (up to 20 + 20 pools per chain).</li>
+      <li>Market cap falls back to FDV when GeckoTerminal doesn't report it, which is common for new tokens.</li>
+      <li>"Buyers" are unique wallets that bought through the pool, as reported by GeckoTerminal. They are not
+        on-chain holder counts.</li>
+      <li>When a token has several pools, the one with the deepest liquidity is shown. Pools where the base token is
+        SOL, ETH, BNB or a stablecoin are skipped, because their price and FDV describe that asset rather than the new token.</li>
+      <li>"Boosted" means the token currently has a paid DexScreener boost. That is marketing spend, not a quality signal.</li>
+    </ul>
+  </details>
 
   <footer>
-    Data: <a href="https://www.geckoterminal.com" target="_blank" rel="noopener">GeckoTerminal</a> (new + trending pools) ·
-    <a href="https://dexscreener.com" target="_blank" rel="noopener">DexScreener</a> (boost/hype signal) — free public APIs, refreshed every 60s.<br/>
-    "Buyers" = unique buying wallets reported by the DEX pool — a proxy for people starting to hold. On-chain holder counts,
-    contract audits and LP-lock status should be verified via the RugCheck / Honeypot / GoPlus links on each card.
+    Data: <a href="https://www.geckoterminal.com" target="_blank" rel="noopener">GeckoTerminal</a> public API (pools, prices,
+    trades) and <a href="https://dexscreener.com" target="_blank" rel="noopener">DexScreener</a> (boost list).
+    No account, API key or backend; everything runs in your browser. ·
+    <a href="../">Other projects</a>
   </footer>
 
 </div>
@@ -272,411 +368,553 @@
 (() => {
   'use strict';
 
-  // ---------- config ----------
   const GT = 'https://api.geckoterminal.com/api/v2';
+  const BOOSTS_URL = 'https://api.dexscreener.com/token-boosts/latest/v1';
   const NETWORKS = [
-    { id: 'solana', label: 'Solana',   short: 'SOL',  dex: 'solana' },
-    { id: 'base',   label: 'Base',     short: 'BASE', dex: 'base' },
-    { id: 'eth',    label: 'Ethereum', short: 'ETH',  dex: 'ethereum' },
-    { id: 'bsc',    label: 'BNB',      short: 'BNB',  dex: 'bsc' },
+    { id: 'solana', label: 'Solana',    short: 'SOL',  dex: 'solana' },
+    { id: 'base',   label: 'Base',      short: 'BASE', dex: 'base',     chainId: 8453, honeypot: 'base' },
+    { id: 'eth',    label: 'Ethereum',  short: 'ETH',  dex: 'ethereum', chainId: 1,    honeypot: 'ethereum' },
+    { id: 'bsc',    label: 'BNB Chain', short: 'BSC',  dex: 'bsc',      chainId: 56,   honeypot: 'bsc' },
   ];
+  const NET = Object.fromEntries(NETWORKS.map(n => [n.id, n]));
+  const ENDPOINTS = ['new_pools', 'trending_pools'];
   const REFRESH_MS = 60_000;
+  const MAX_ROWS = 60;
+
+  // GeckoTerminal documents 30 calls/min for its free API, but in testing (Nov 2026) it started
+  // answering 429 at around 10 calls/min per IP, and sooner when calls came in quick bursts.
+  // Four chains x two endpoints = 8 calls per cycle, spread 5 s apart so a full cycle fits in a
+  // minute; chain toggles and manual refreshes wait for room in the window.
+  const GT_CALLS_PER_MIN = 10;
+  const GT_WINDOW_MS = 61_000; // one second of slack: requests reach the server a little after we count them
+  const GT_MIN_GAP_MS = 5000;
+  const BACKOFF_START_MS = 60_000;
+  const BACKOFF_MAX_MS = 300_000;
+
+  // Pools quoted "backwards" (e.g. USDC / NEWTOKEN): GeckoTerminal's price and FDV then describe
+  // the stablecoin or wrapped asset, not the token we want to screen, so they are skipped.
+  const QUOTE_SYMBOLS = new Set([
+    'SOL', 'WSOL', 'ETH', 'WETH', 'BNB', 'WBNB', 'USDC', 'USDC.E', 'USDBC', 'USDT', 'USDS',
+    'USDE', 'DAI', 'USD1', 'FDUSD', 'PYUSD', 'WBTC', 'CBBTC', 'BTCB',
+  ]);
 
   const state = {
     chains: new Set(['solana', 'base']),
-    pools: new Map(),      // pooladdr -> normalized coin
-    boosts: new Map(),     // lowercased token addr -> boost total
+    cache: new Map(),   // "net/endpoint" -> { coins, at }
+    boosts: new Set(),  // "dexscreenerChain:lowercased token address"
+    boostsAt: 0,
+    open: new Set(),    // keys of rows whose details are expanded
     auto: true,
     timer: null,
-    loading: false,
+    running: false,
+    rerun: false,
+    cycleStart: 0,
+    hiddenSkip: false,
+    calls: [],          // timestamps of recent GeckoTerminal requests
+    backoffMs: 0,
+    backoffUntil: 0,
     lastError: null,
   };
 
   const $ = (id) => document.getElementById(id);
-
-  // ---------- helpers ----------
-  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
-
-  function fmtUsd(v) {
-    if (v == null) return '—';
-    if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
-    if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
-    if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'k';
-    return '$' + v.toFixed(v < 0.01 ? 6 : 2);
-  }
-  function fmtPrice(v) {
-    if (v == null) return '—';
-    if (v >= 1) return '$' + v.toFixed(2);
-    if (v >= 0.001) return '$' + v.toFixed(4);
-    if (v <= 0) return '$0';
-    // sub-penny: fixed notation with 3 significant digits (never scientific)
-    const decimals = Math.min(2 - Math.floor(Math.log10(v)), 12);
-    return '$' + v.toFixed(decimals);
-  }
-  function fmtPct(v) {
-    if (v == null) return '—';
-    const s = v >= 0 ? '+' : '';
-    return s + (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) + '%';
-  }
-  function fmtAge(ms) {
-    const m = ms / 60000;
-    if (m < 60) return Math.max(1, Math.round(m)) + 'm';
-    const h = m / 60;
-    if (h < 24) return h.toFixed(1).replace(/\.0$/, '') + 'h';
-    return (h / 24).toFixed(1).replace(/\.0$/, '') + 'd';
-  }
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // GeckoTerminal sends most numbers as strings and uses null for unknown values.
+  const num = (v) => { if (v == null || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+  const count = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  async function getJson(url) {
-    const res = await fetch(url, { headers: { accept: 'application/json' } });
-    if (!res.ok) throw new Error(res.status + ' from ' + new URL(url).host);
-    return res.json();
+  // ---------- formatting ----------
+  function fmtUsd(v) {
+    if (v == null) return '–';
+    const a = Math.abs(v);
+    if (a >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+    if (a >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+    if (a >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'k';
+    if (a >= 1 || v === 0) return '$' + v.toFixed(0);
+    return '<$1';
+  }
+  function fmtPrice(v) {
+    if (v == null) return '–';
+    if (v <= 0) return '$0';
+    if (v >= 1000) return '$' + Math.round(v).toLocaleString('en-US');
+    if (v >= 1) return '$' + v.toFixed(2);
+    if (v >= 0.0001) return '$' + v.toPrecision(3);
+    // Long runs of leading zeros are written as a subscript count, the usual DEX-screener
+    // convention: 0.00000276 -> $0.0₅276 (returns HTML).
+    let zeros = -Math.floor(Math.log10(v)) - 1;
+    let digits = Math.round(v * 10 ** (zeros + 3));
+    if (digits >= 1000) { zeros -= 1; digits = 100; }
+    return `$0.0<sub>${zeros}</sub>${digits}`;
+  }
+  function fmtPct(v) {
+    if (v == null) return '–';
+    const r = Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
+    if (r === 0) return '0.0%';
+    return (r > 0 ? '+' : '') + (Math.abs(r) >= 100 ? r.toLocaleString('en-US') : r.toFixed(1)) + '%';
+  }
+  function fmtAge(ms) {
+    if (ms == null) return '–';
+    const m = ms / 60000;
+    if (m < 60) return Math.max(1, Math.round(m)) + 'm';
+    const h = m / 60;
+    if (h < 24) return Math.round(h) + 'h';
+    return Math.round(h / 24) + 'd';
+  }
+  const fmtInt = (v) => Math.round(v).toLocaleString('en-US');
+  const fmtTime = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  // ---------- fetching ----------
+  class ApiError extends Error {
+    constructor(message, rateLimited) { super(message); this.rateLimited = rateLimited; }
   }
 
-  // ---------- data fetch ----------
-  async function fetchNetworkPools(net) {
-    const urls = [
-      `${GT}/networks/${net}/new_pools?page=1&include=base_token`,
-      `${GT}/networks/${net}/trending_pools?page=1&include=base_token`,
-    ];
-    const results = await Promise.allSettled(urls.map(getJson));
-    if (!results.some(r => r.status === 'fulfilled')) {
-      throw new Error('all sources failed for ' + net);
+  async function getJson(url) {
+    let res;
+    try {
+      res = await fetch(url, { headers: { accept: 'application/json' } });
+    } catch {
+      // GeckoTerminal's 429 responses carry no CORS headers, so the browser reports them as a
+      // network error. Treat any network failure as a possible rate limit and back off.
+      throw new ApiError(navigator.onLine === false ? 'You appear to be offline' : 'Request failed, probably the rate limit', true);
+    }
+    if (res.status === 429) throw new ApiError('Rate limited (HTTP 429)', true);
+    if (!res.ok) throw new ApiError('HTTP ' + res.status, false);
+    try { return await res.json(); } catch { throw new ApiError('Invalid JSON response', false); }
+  }
+
+  // Sliding-window limiter for GeckoTerminal. Only one refresh cycle runs at a time, so calls
+  // through here are sequential.
+  async function gtSlot() {
+    for (;;) {
+      const now = Date.now();
+      state.calls = state.calls.filter(t => now - t < GT_WINDOW_MS);
+      let wait = 0;
+      if (state.calls.length) wait = state.calls[state.calls.length - 1] + GT_MIN_GAP_MS - now;
+      const windowFull = state.calls.length >= GT_CALLS_PER_MIN;
+      if (windowFull) wait = Math.max(wait, state.calls[0] + GT_WINDOW_MS - now);
+      if (wait <= 0) { state.calls.push(now); return; }
+      if (windowFull) setStatus('Waiting ' + Math.ceil(wait / 1000) + ' s for the GeckoTerminal rate limit');
+      await sleep(wait);
+    }
+  }
+
+  async function loadBoosts() {
+    if (Date.now() - state.boostsAt < REFRESH_MS - 5000) return;
+    try {
+      const data = await getJson(BOOSTS_URL);
+      const set = new Set();
+      for (const b of Array.isArray(data) ? data : []) {
+        if (b && b.chainId && b.tokenAddress) set.add(b.chainId + ':' + String(b.tokenAddress).toLowerCase());
+      }
+      state.boosts = set;
+      state.boostsAt = Date.now();
+    } catch { /* optional signal: keep the previous list */ }
+  }
+
+  function parsePools(body, net) {
+    const tokens = new Map();
+    for (const inc of body?.included || []) {
+      if (inc.type === 'token') tokens.set(inc.id, inc.attributes || {});
     }
     const out = [];
-    for (const r of results) {
-      if (r.status !== 'fulfilled') continue;
-      const included = new Map();
-      for (const inc of r.value.included || []) {
-        if (inc.type === 'token') included.set(inc.id, inc.attributes || {});
-      }
-      for (const p of r.value.data || []) {
-        const c = normalizePool(p, included, net);
-        if (c) out.push(c);
-      }
+    for (const p of Array.isArray(body?.data) ? body.data : []) {
+      const c = normalizePool(p, tokens, net);
+      if (c) out.push(c);
     }
     return out;
   }
 
-  async function fetchBoosts() {
-    // DexScreener paid "boosts" = teams actively marketing; used only as a hype badge.
-    try {
-      const data = await getJson('https://api.dexscreener.com/token-boosts/latest/v1');
-      const map = new Map();
-      for (const b of Array.isArray(data) ? data : []) {
-        if (b.tokenAddress) {
-          const k = b.tokenAddress.toLowerCase();
-          map.set(k, (map.get(k) || 0) + (num(b.amount) || 0));
-        }
-      }
-      state.boosts = map;
-    } catch { /* hype badge is optional */ }
-  }
-
-  function normalizePool(p, included, net) {
+  function normalizePool(p, tokens, net) {
     const a = p.attributes || {};
-    const rel = p.relationships || {};
-    const baseTokenId = rel.base_token?.data?.id || '';
-    const tokenAttrs = included.get(baseTokenId) || {};
-    const tokenAddr = (tokenAttrs.address || baseTokenId.replace(net + '_', '')) || '';
-
+    const baseId = p.relationships?.base_token?.data?.id || '';
+    const tok = tokens.get(baseId) || {};
+    const tokenAddr = tok.address || (baseId.startsWith(net + '_') ? baseId.slice(net.length + 1) : '');
     const price = num(a.base_token_price_usd);
-    const fdv = num(a.fdv_usd);
-    const mc = num(a.market_cap_usd) ?? fdv;   // meme coins: MC often unreported → FDV
     const liq = num(a.reserve_in_usd);
-    const created = a.pool_created_at ? Date.parse(a.pool_created_at) : null;
-    if (price == null || liq == null) return null;
+    if (!a.address || price == null || liq == null) return null;
 
+    const symbol = String(tok.symbol || (a.name || '').split(' / ')[0]).trim();
+    if (QUOTE_SYMBOLS.has(symbol.toUpperCase())) return null;
+
+    const fdv = num(a.fdv_usd);
+    const mcap = num(a.market_cap_usd); // sometimes "0.0" rather than null when unknown
+    const created = Date.parse(a.pool_created_at);
     const pc = a.price_change_percentage || {};
     const tx = a.transactions || {};
-    const vol = a.volume_usd || {};
     const t = (k) => ({
-      buys: num(tx[k]?.buys) || 0, sells: num(tx[k]?.sells) || 0,
-      buyers: num(tx[k]?.buyers) || 0, sellers: num(tx[k]?.sellers) || 0,
+      buys: count(tx[k]?.buys), sells: count(tx[k]?.sells),
+      buyers: count(tx[k]?.buyers), sellers: count(tx[k]?.sellers),
     });
 
-    let symbol = tokenAttrs.symbol || '';
-    let name = tokenAttrs.name || '';
-    if (!symbol && a.name) symbol = a.name.split('/')[0].trim();
-    if (!name) name = symbol;
-
     return {
-      key: net + ':' + (a.address || p.id),
+      key: net + ':' + a.address,
+      tokenKey: net + ':' + tokenAddr.toLowerCase(),
       net,
-      poolAddr: a.address || '',
+      poolAddr: a.address,
       tokenAddr,
-      symbol, name,
-      price, mc, fdv, liq,
-      ageMs: created ? Date.now() - created : null,
+      symbol: symbol || '?',
+      name: tok.name || symbol,
+      price, fdv, liq,
+      mc: mcap || fdv,
+      mcIsFdv: !mcap && fdv != null,
+      createdAt: Number.isFinite(created) ? created : null,
       pc: { m5: num(pc.m5), h1: num(pc.h1), h6: num(pc.h6), h24: num(pc.h24) },
-      vol24: num(vol.h24) || 0,
-      tx: { m5: t('m5'), h1: t('h1'), h24: t('h24') },
+      vol24: num(a.volume_usd?.h24) ?? 0,
+      tx: { h1: t('h1'), h24: t('h24') },
     };
   }
 
   // ---------- scoring ----------
-  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
   function fomoScore(c) {
-    // Momentum (0–45): recent gains weighted toward the last hour
     const h1 = clamp(c.pc.h1 ?? 0, -50, 150);
     const m5 = clamp(c.pc.m5 ?? 0, -20, 50);
     const h6 = clamp(c.pc.h6 ?? 0, -50, 300);
     const momentum = clamp((h1 / 150) * 28 + (m5 / 50) * 9 + (h6 / 300) * 8, 0, 45);
 
-    // Crowd growth (0–30): unique buyers + acceleration of buying
-    const buyers24 = c.tx.h24.buyers;
-    const crowdBase = clamp(Math.log10(1 + buyers24) / Math.log10(2000), 0, 1) * 18;
-    const hourlyRate24 = buyers24 / 24;
-    const accel = hourlyRate24 > 0 ? clamp(c.tx.h1.buyers / hourlyRate24 / 4, 0, 1) * 12
-                 : (c.tx.h1.buyers > 5 ? 12 : 0);
-    const crowd = crowdBase + accel;
+    // The 24h buyer count only covers the pool's lifetime, so a 3-hour-old pool's hourly
+    // average is buyers / 3, not buyers / 24.
+    const b24 = c.tx.h24.buyers;
+    const hours = c.ageMs == null ? 24 : clamp(c.ageMs / 3.6e6, 1, 24);
+    const avgHourly = b24 / hours;
+    const accelRatio = avgHourly > 0 ? c.tx.h1.buyers / avgHourly : null;
+    const buyerBase = clamp(Math.log10(1 + b24) / Math.log10(2001), 0, 1) * 18;
+    const buyerAccel = accelRatio == null ? 0 : clamp(accelRatio / 4, 0, 1) * 12;
 
-    // Buy pressure (0–15)
-    const bt = c.tx.h1.buys + c.tx.h1.sells;
-    const pressure = bt >= 5 ? clamp((c.tx.h1.buys / bt - 0.5) * 2, 0, 1) * 15 : 4;
+    const trades = c.tx.h1.buys + c.tx.h1.sells;
+    const pressure = trades >= 5 ? clamp((c.tx.h1.buys / trades - 0.5) * 2, 0, 1) * 15 : 0;
 
-    // Turnover (0–10): 24h volume vs valuation
     const base = Math.max(c.mc || 0, c.liq, 1);
     const turnover = clamp(c.vol24 / base / 2, 0, 1) * 10;
 
-    return Math.round(clamp(momentum + crowd + pressure + turnover, 0, 100));
+    const parts = { momentum, buyers: buyerBase + buyerAccel, pressure, turnover };
+    return { total: Math.round(momentum + buyerBase + buyerAccel + pressure + turnover), parts, accelRatio };
   }
 
-  function safetyCheck(c) {
-    let score = 100;
-    const flags = [];
+  function riskCheck(c) {
+    const warn = [];
     const good = [];
+    const hit = (pts, text) => warn.push({ pts, text });
 
-    // Liquidity depth
-    if (c.liq < 5000)       { score -= 40; flags.push('Very thin liquidity (' + fmtUsd(c.liq) + ') — easy to rug or impossible to exit'); }
-    else if (c.liq < 20000) { score -= 18; flags.push('Low liquidity (' + fmtUsd(c.liq) + ') — high slippage, easier to drain'); }
-    else if (c.liq >= 50000) good.push('Decent liquidity depth (' + fmtUsd(c.liq) + ')');
+    if (c.liq < 5000) hit(40, 'Liquidity is only ' + fmtUsd(c.liq) + '. Easy to drain, hard to sell into.');
+    else if (c.liq < 20000) hit(18, 'Low liquidity (' + fmtUsd(c.liq) + '). Expect high slippage.');
+    else if (c.liq >= 50000) good.push('Liquidity of ' + fmtUsd(c.liq));
 
-    // Liquidity vs valuation
     const valuation = c.fdv ?? c.mc;
-    if (valuation && valuation > 0) {
+    if (valuation > 0) {
       const ratio = c.liq / valuation;
-      if (ratio < 0.005)      { score -= 25; flags.push('Liquidity is under 0.5% of valuation — price is propped on almost nothing'); }
-      else if (ratio < 0.02)  { score -= 10; flags.push('Thin liquidity relative to market cap (<2%)'); }
-      else good.push('Healthy liquidity-to-cap ratio (' + (ratio * 100).toFixed(1) + '%)');
+      const of = c.fdv != null ? 'FDV' : 'market cap';
+      const pct = (ratio * 100).toFixed(ratio < 0.1 ? 2 : 0) + '%';
+      if (ratio < 0.005) hit(25, 'Liquidity is ' + pct + ' of ' + of + '. The price rests on very little.');
+      else if (ratio < 0.02) hit(10, 'Liquidity is ' + pct + ' of ' + of + ' (under 2%).');
+      // Above 100% usually means the pool holds most of the supply; not a signal either way.
+      else if (ratio <= 1) good.push('Liquidity is ' + pct + ' of ' + of);
     }
 
-    // Pool age — a brand-new pool can never rank better than "Caution"
-    let ageCap = 100;
+    let cap = 100;
     if (c.ageMs != null) {
       const h = c.ageMs / 3.6e6;
-      if (h < 1)        { score -= 20; ageCap = 60; flags.push('Pool is under 1 hour old — most rugs happen in the first hours'); }
-      else if (h < 12)  { score -= 10; flags.push('Very new pool (' + fmtAge(c.ageMs) + ' old)'); }
-      else if (h > 72)  good.push('Pool has survived ' + fmtAge(c.ageMs) + ' without being pulled');
+      if (h < 1) { hit(20, 'Pool is under 1 hour old. Most rug pulls happen in the first hours.'); cap = 60; }
+      else if (h < 12) hit(10, 'Pool is ' + fmtAge(c.ageMs) + ' old.');
+      else if (h >= 72) good.push('Pool has been trading for ' + fmtAge(c.ageMs));
     }
 
-    // Honeypot proxy: people buy but nobody manages to sell
-    if (c.tx.h24.buys >= 20 && c.tx.h24.sells === 0) {
-      score -= 45; flags.push('Zero sells with ' + c.tx.h24.buys + ' buys — classic honeypot pattern');
-    } else if (c.tx.h24.sells > 0) {
-      good.push('Sells are going through (' + c.tx.h24.sells + ' in 24h) — not an obvious honeypot');
-    }
+    const d = c.tx.h24;
+    if (d.buys >= 20 && d.sells === 0) hit(45, fmtInt(d.buys) + ' buys and no sells in 24h. Common honeypot pattern.');
+    else if (d.sellers >= 5) good.push(fmtInt(d.sellers) + ' different wallets sold in 24h');
 
-    // Wash trading proxy
     if (c.liq > 0 && c.vol24 / c.liq > 100) {
-      score -= 15; flags.push('Volume is ' + Math.round(c.vol24 / c.liq) + '× liquidity — possible wash trading');
+      hit(15, '24h volume is ' + fmtInt(c.vol24 / c.liq) + ' times liquidity. Possible wash trading.');
     }
 
-    // Crowd breadth
-    if (c.tx.h24.buyers < 20) { score -= 12; flags.push('Only ' + c.tx.h24.buyers + ' unique buyers in 24h — very few real holders yet'); }
-    else if (c.tx.h24.buyers >= 150) good.push(c.tx.h24.buyers + ' unique buyers in 24h — broad participation');
+    if (d.buyers < 20) hit(12, 'Only ' + d.buyers + ' unique buyer' + (d.buyers === 1 ? '' : 's') + ' in 24h.');
+    else if (d.buyers >= 150) good.push(fmtInt(d.buyers) + ' unique buyers in 24h');
 
-    // Seller-domination (distribution/dump pattern)
-    const total = c.tx.h24.buys + c.tx.h24.sells;
-    if (total > 50 && c.tx.h24.sells / total > 0.75) {
-      score -= 12; flags.push('75%+ of trades are sells — holders are dumping');
+    const total = d.buys + d.sells;
+    if (total > 50 && d.sells / total > 0.75) {
+      hit(12, Math.round(d.sells / total * 100) + '% of 24h trades are sells.');
     }
 
-    return { score: Math.round(clamp(Math.min(score, ageCap), 0, 100)), flags, good };
+    const raw = 100 - warn.reduce((s, w) => s + w.pts, 0);
+    const score = Math.round(clamp(Math.min(raw, cap), 0, 100));
+    const level = score >= 70 ? 'low' : score >= 45 ? 'med' : 'high';
+    return { score, level, warn, good, capped: raw > cap };
   }
 
-  // ---------- filtering + render ----------
+  const RISK_LABEL = { low: 'Lower risk', med: 'Caution', high: 'High risk' };
+
+  // ---------- view ----------
+  function currentCoins() {
+    // One row per token: keep its deepest pool.
+    const byToken = new Map();
+    for (const net of state.chains) {
+      for (const ep of ENDPOINTS) {
+        for (const c of state.cache.get(net + '/' + ep)?.coins || []) {
+          const prev = byToken.get(c.tokenKey);
+          if (!prev || c.liq > prev.liq) byToken.set(c.tokenKey, c);
+        }
+      }
+    }
+    const now = Date.now();
+    return [...byToken.values()].map(c => {
+      const x = { ...c, ageMs: c.createdAt == null ? null : Math.max(0, now - c.createdAt) };
+      x.fomo = fomoScore(x);
+      x.risk = riskCheck(x);
+      return x;
+    });
+  }
+
+  function filterAndSort(coins) {
+    const maxMc = Number($('maxMc').value);
+    const minLiq = Number($('minLiq').value);
+    const minBuyers = Number($('minBuyers').value);
+    const minH1 = Number($('minH1').value);
+    const minRisk = Number($('minRisk').value);
+
+    const list = coins.filter(c =>
+      (c.mc == null || c.mc <= maxMc) &&
+      c.liq >= minLiq &&
+      c.tx.h24.buyers >= minBuyers &&
+      (minH1 === -Infinity || (c.pc.h1 != null && c.pc.h1 >= minH1)) &&
+      c.risk.score >= minRisk
+    );
+
+    const sorters = {
+      fomo:   (a, b) => b.fomo.total - a.fomo.total,
+      h1:     (a, b) => (b.pc.h1 ?? -Infinity) - (a.pc.h1 ?? -Infinity),
+      buyers: (a, b) => b.tx.h24.buyers - a.tx.h24.buyers,
+      newest: (a, b) => (b.createdAt ?? -Infinity) - (a.createdAt ?? -Infinity),
+      risk:   (a, b) => b.risk.score - a.risk.score,
+    };
+    const sorter = sorters[$('sortBy').value] || sorters.fomo;
+    // Secondary key keeps the order stable between refreshes when primary values tie.
+    list.sort((a, b) => sorter(a, b) || b.fomo.total - a.fomo.total || a.key.localeCompare(b.key));
+    return list;
+  }
+
   function auditLinks(c) {
-    const links = [];
-    const netInfo = NETWORKS.find(n => n.id === c.net);
-    if (c.poolAddr) links.push(['Chart', `https://dexscreener.com/${netInfo.dex}/${c.poolAddr}`]);
-    links.push(['GeckoTerminal', `https://www.geckoterminal.com/${c.net}/pools/${c.poolAddr}`]);
+    const n = NET[c.net];
+    const addr = encodeURIComponent(c.tokenAddr);
+    const links = [
+      ['DexScreener chart', `https://dexscreener.com/${n.dex}/${encodeURIComponent(c.poolAddr)}`],
+      ['GeckoTerminal', `https://www.geckoterminal.com/${c.net}/pools/${encodeURIComponent(c.poolAddr)}`],
+    ];
     if (c.tokenAddr) {
       if (c.net === 'solana') {
-        links.push(['RugCheck', `https://rugcheck.xyz/tokens/${c.tokenAddr}`]);
+        links.push(['RugCheck', `https://rugcheck.xyz/tokens/${addr}`]);
       } else {
-        links.push(['Honeypot', `https://honeypot.is/${c.net === 'bsc' ? '' : 'ethereum'}?address=${c.tokenAddr}`]);
-        const gp = { eth: '1', bsc: '56', base: '8453' }[c.net];
-        if (gp) links.push(['GoPlus', `https://gopluslabs.io/token-security/${gp}/${c.tokenAddr}`]);
+        links.push(['Honeypot.is', `https://honeypot.is/${n.honeypot}?address=${addr}`]);
+        links.push(['GoPlus', `https://gopluslabs.io/token-security/${n.chainId}/${addr}`]);
       }
     }
     return links;
   }
 
-  function visibleCoins() {
-    const maxMc = parseFloat($('maxMc').value);
-    const minLiq = parseFloat($('minLiq').value);
-    const minBuyers = parseFloat($('minBuyers').value);
-    const minH1 = parseFloat($('minH1').value);
-    const minSafety = parseFloat($('minSafety').value);
-    const sortBy = $('sortBy').value;
+  const pctCell = (v, label, cls = '') =>
+    `<td class="${cls}${fmtPct(v).startsWith('-') ? ' neg' : ''}" data-label="${label}">${fmtPct(v)}</td>`;
 
-    let list = [...state.pools.values()].filter(c =>
-      state.chains.has(c.net) &&
-      (c.mc == null || c.mc <= maxMc) &&
-      c.liq >= minLiq &&
-      c.tx.h24.buyers >= minBuyers &&
-      (c.pc.h1 ?? -Infinity) >= minH1 &&
-      c.safety.score >= minSafety
-    );
-
-    const sorters = {
-      fomo:   (a, b) => b.fomo - a.fomo,
-      h1:     (a, b) => (b.pc.h1 ?? -1e9) - (a.pc.h1 ?? -1e9),
-      buyers: (a, b) => b.tx.h24.buyers - a.tx.h24.buyers,
-      newest: (a, b) => (a.ageMs ?? Infinity) - (b.ageMs ?? Infinity),
-      safety: (a, b) => b.safety.score - a.safety.score,
-    };
-    list.sort(sorters[sortBy] || sorters.fomo);
-    return list.slice(0, 60);
+  function rowHtml(c, i) {
+    const n = NET[c.net];
+    const r = c.risk;
+    const open = state.open.has(c.key);
+    const boosted = c.tokenAddr && state.boosts.has(n.dex + ':' + c.tokenAddr.toLowerCase());
+    const detailId = 'd-' + i;
+    return `
+      <tr class="row">
+        <td class="rank">${i + 1}</td>
+        <td class="l tok"><span class="sym">${esc(c.symbol)}</span>
+          <span class="sub">${esc(n.short)} · ${esc(c.name)}${boosted ? ' · boosted' : ''}</span></td>
+        <td data-label="Age">${fmtAge(c.ageMs)}</td>
+        <td class="l" data-label="FOMO"><span class="score"><span>${c.fomo.total}</span><span class="bar"><span style="width:${c.fomo.total}%"></span></span></span></td>
+        <td class="l" data-label="Risk"><span class="risk ${r.level}" title="${RISK_LABEL[r.level]}">${r.score}</span></td>
+        <td data-label="Price">${fmtPrice(c.price)}</td>
+        ${pctCell(c.pc.m5, '5m', 'opt')}
+        ${pctCell(c.pc.h1, '1h')}
+        ${pctCell(c.pc.h6, '6h', 'opt')}
+        ${pctCell(c.pc.h24, '24h')}
+        <td data-label="Mkt cap"${c.mcIsFdv ? ' title="FDV (market cap not reported)"' : ''}>${fmtUsd(c.mc)}</td>
+        <td data-label="Liquidity">${fmtUsd(c.liq)}</td>
+        <td class="opt" data-label="Vol 24h">${fmtUsd(c.vol24)}</td>
+        <td data-label="Buyers 24h">${fmtInt(c.tx.h24.buyers)}</td>
+        <td class="opt" data-label="Buyers 1h">${fmtInt(c.tx.h1.buyers)}</td>
+        <td class="tog"><button class="toggle" type="button" data-key="${esc(c.key)}" aria-expanded="${open}" aria-controls="${detailId}">${open ? 'Hide' : 'Details'}</button></td>
+      </tr>
+      ${open ? detailHtml(c, detailId, boosted) : ''}`;
   }
 
-  function pcChip(label, v) {
-    const cls = v == null ? '' : v >= 0 ? 'up' : 'down';
-    return `<div class="pc ${cls}"><span>${label}</span>${fmtPct(v)}</div>`;
+  function detailHtml(c, id, boosted) {
+    const f = c.fomo;
+    const r = c.risk;
+    const pt = (v) => v.toFixed(1);
+    const checks = [
+      ...r.warn.map(w => `<li class="bad"><span class="pts">−${w.pts}</span><span>${esc(w.text)}</span></li>`),
+      ...r.good.map(g => `<li class="ok"><span class="pts">ok</span><span>${esc(g)}</span></li>`),
+    ].join('') || '<li><span></span><span class="muted">No signals either way.</span></li>';
+    const links = auditLinks(c).map(([label, url]) =>
+      `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`).join('');
+
+    return `
+      <tr class="detail" id="${id}"><td colspan="16">
+        <div class="detail-grid">
+          <div>
+            <h3>FOMO score ${f.total}</h3>
+            <dl class="kv">
+              <dt>Price momentum</dt><dd>${pt(f.parts.momentum)} / 45</dd>
+              <dt>Buyers</dt><dd>${pt(f.parts.buyers)} / 30</dd>
+              <dt>Buy pressure</dt><dd>${pt(f.parts.pressure)} / 15</dd>
+              <dt>Turnover</dt><dd>${pt(f.parts.turnover)} / 10</dd>
+              <dt>Last-hour buyers vs hourly average</dt><dd>${f.accelRatio == null ? '–' : f.accelRatio.toFixed(1) + '×'}</dd>
+            </dl>
+          </div>
+          <div>
+            <h3>Risk score ${r.score}: ${RISK_LABEL[r.level]}${r.capped ? ' (capped at 60 for pools under 1 hour old)' : ''}</h3>
+            <ul class="checks">${checks}</ul>
+          </div>
+          <div>
+            <h3>Trades</h3>
+            <dl class="kv">
+              <dt>Buys / sells, 24h</dt><dd>${fmtInt(c.tx.h24.buys)} / ${fmtInt(c.tx.h24.sells)}</dd>
+              <dt>Unique buyers / sellers, 24h</dt><dd>${fmtInt(c.tx.h24.buyers)} / ${fmtInt(c.tx.h24.sellers)}</dd>
+              <dt>Buys / sells, 1h</dt><dd>${fmtInt(c.tx.h1.buys)} / ${fmtInt(c.tx.h1.sells)}</dd>
+              <dt>${c.mcIsFdv ? 'FDV (no market cap reported)' : 'FDV'}</dt><dd>${fmtUsd(c.fdv)}</dd>
+            </dl>
+            ${boosted ? '<p class="muted" style="font-size:0.8rem;margin-top:6px">Has an active paid DexScreener boost (marketing spend, not a quality signal).</p>' : ''}
+          </div>
+        </div>
+        <p style="margin-top:10px;font-size:0.8rem"><span class="muted">Token</span> <span class="addr">${esc(c.tokenAddr)}</span></p>
+        <div class="links">${links}</div>
+      </td></tr>`;
   }
 
   function render() {
-    const grid = $('grid');
-    const list = visibleCoins();
-    $('counts').textContent = list.length + ' coins match · ' + state.pools.size + ' scanned';
+    const tbody = $('rows');
+    const coins = currentCoins();
+    const list = filterAndSort(coins);
+    const shown = list.slice(0, MAX_ROWS);
+    const chainNames = NETWORKS.filter(n => state.chains.has(n.id)).map(n => n.label).join(', ');
+    const hasData = [...state.chains].some(net => ENDPOINTS.some(ep => state.cache.has(net + '/' + ep)));
 
-    if (!list.length) {
-      grid.innerHTML = `<div class="empty">No coins match the current filters.<br/>Try loosening Max MC / Min Buyers, or enable more chains.</div>`;
+    $('counts').textContent = hasData
+      ? (list.length > shown.length ? `Showing ${shown.length} of ${list.length} matches` : `${list.length} match${list.length === 1 ? '' : 'es'}`)
+        + ` · ${coins.length} tokens loaded (${chainNames})`
+      : '';
+
+    if (!shown.length) {
+      let msg, cls = '';
+      if (!hasData && state.lastError) {
+        cls = ' err';
+        msg = 'Could not load pools from GeckoTerminal: ' + esc(state.lastError.message) + '.'
+          + (state.backoffUntil > Date.now() ? ' Retrying at ' + fmtTime(state.backoffUntil) + '.' : ' Use Refresh to try again.');
+      } else if (!hasData) {
+        msg = 'Loading pools…';
+      } else {
+        msg = `No tokens match these filters (${coins.length} loaded). Try a higher market cap limit, lower minimum liquidity or buyers, or another chain.`;
+      }
+      tbody.innerHTML = `<tr class="state-row${cls}"><td colspan="16">${msg}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = shown.map(rowHtml).join('');
+  }
+
+  function setStatus(text, isError) {
+    $('status').innerHTML = isError ? `<span class="err">${esc(text)}</span>` : esc(text);
+  }
+
+  // ---------- refresh cycle ----------
+  // force: refetch every selected chain (timer and Refresh button). Otherwise only endpoints
+  // whose data is missing or about a refresh interval old are fetched (chain toggles).
+  async function runCycle(force) {
+    const now = Date.now();
+    state.cycleStart = now;
+    const jobs = [];
+    for (const net of NETWORKS.map(n => n.id).filter(id => state.chains.has(id))) {
+      for (const ep of ENDPOINTS) {
+        const c = state.cache.get(net + '/' + ep);
+        if (force || !c || now - c.at > REFRESH_MS - 5000) jobs.push([net, ep]);
+      }
+    }
+    render();
+    if (!jobs.length) return;
+
+    if (now < state.backoffUntil) {
+      setStatus('Rate limited by GeckoTerminal. Next try at ' + fmtTime(state.backoffUntil) + '.', true);
       return;
     }
 
-    grid.innerHTML = list.map((c, i) => {
-      const netInfo = NETWORKS.find(n => n.id === c.net) || { short: c.net };
-      const s = c.safety;
-      const sCls = s.score >= 70 ? 'low' : s.score >= 45 ? 'med' : 'high';
-      const sTxt = s.score >= 70 ? '🛡 Lower risk' : s.score >= 45 ? '⚠ Caution' : '☠ High risk';
-      const boost = c.tokenAddr && state.boosts.get(c.tokenAddr.toLowerCase());
-
-      const hourlyRate = c.tx.h24.buyers / 24;
-      const accel = hourlyRate > 0 && c.tx.h1.buyers > hourlyRate * 1.5;
-      const flagsHtml = [
-        ...s.flags.map(f => `<div class="flag bad">${esc(f)}</div>`),
-        ...s.good.map(f => `<div class="flag good">${esc(f)}</div>`),
-      ].join('') || '<div class="flag">No notable signals.</div>';
-
-      const links = auditLinks(c).map(([t, u]) =>
-        `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${t} ↗</a>`).join('');
-
-      return `
-      <div class="coin" data-key="${esc(c.key)}">
-        <div class="coin-top">
-          <div class="rank">#${i + 1}</div>
-          <div>
-            <div class="sym">${esc(c.symbol || '?')}</div>
-            <div class="name">${esc(c.name || '')}</div>
-          </div>
-          <div class="badges">
-            ${boost ? `<span class="hype" title="Actively promoted on DexScreener (paid boost) — hype, not endorsement">⚡</span>` : ''}
-            <span class="chain-badge">${esc(netInfo.short)}</span>
-          </div>
-        </div>
-
-        <div class="fomo-row">
-          <div>
-            <div class="fomo-score">${c.fomo}</div>
-            <div class="fomo-label">FOMO score</div>
-          </div>
-          <div class="meter"><div style="width:${c.fomo}%"></div></div>
-          <div class="safety ${sCls}">${sTxt} · ${s.score}</div>
-        </div>
-
-        <div class="stats">
-          <div class="stat"><div class="k">Price</div><div class="v">${fmtPrice(c.price)}</div></div>
-          <div class="stat"><div class="k">Mkt Cap</div><div class="v">${fmtUsd(c.mc)}</div></div>
-          <div class="stat"><div class="k">Liquidity</div><div class="v">${fmtUsd(c.liq)}</div></div>
-          <div class="stat"><div class="k">Vol 24h</div><div class="v">${fmtUsd(c.vol24)}</div></div>
-          <div class="stat"><div class="k">Age</div><div class="v">${c.ageMs != null ? fmtAge(c.ageMs) : '—'}</div></div>
-          <div class="stat"><div class="k">Buys/Sells 24h</div><div class="v">${c.tx.h24.buys}/${c.tx.h24.sells}</div></div>
-        </div>
-
-        <div class="changes">
-          ${pcChip('5m', c.pc.m5)}${pcChip('1h', c.pc.h1)}${pcChip('6h', c.pc.h6)}${pcChip('24h', c.pc.h24)}
-        </div>
-
-        <div class="holders">
-          👥 <b>${c.tx.h24.buyers}</b> unique buyers 24h · <b>${c.tx.h1.buyers}</b> last hour
-          ${accel ? '<span class="trend-up">▲ accelerating</span>' : '<span class="trend-flat">— steady</span>'}
-        </div>
-
-        <div class="flags">${flagsHtml}</div>
-
-        <div class="links">
-          ${links}
-          <button class="expand">risk details ▾</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  // ---------- refresh loop ----------
-  async function refresh() {
-    if (state.loading) return;
-    state.loading = true;
     $('refreshBtn').disabled = true;
-    $('status').innerHTML = '<span class="dot"></span>Scanning…';
+    setStatus('Updating…');
+    const boosts = loadBoosts();
+    let ok = 0, failed = 0, skipped = 0, cycleError = null;
 
-    const nets = [...state.chains];
-    const jobs = [fetchBoosts(), ...nets.map(n => fetchNetworkPools(n))];
-    const results = await Promise.allSettled(jobs);
-
-    let ok = 0, fail = 0;
-    const fresh = new Map();
-    results.slice(1).forEach((r) => {
-      if (r.status === 'fulfilled') {
+    for (const [net, ep] of jobs) {
+      if (Date.now() < state.backoffUntil) { skipped++; continue; }
+      await gtSlot();
+      try {
+        const body = await getJson(`${GT}/networks/${net}/${ep}?page=1&include=base_token`);
+        state.cache.set(net + '/' + ep, { coins: parsePools(body, net), at: Date.now() });
         ok++;
-        for (const c of r.value) {
-          c.fomo = fomoScore(c);
-          c.safety = safetyCheck(c);
-          fresh.set(c.key, c);
+        render();
+      } catch (e) {
+        failed++;
+        cycleError = e;
+        if (e.rateLimited) {
+          state.backoffMs = state.backoffMs ? Math.min(state.backoffMs * 2, BACKOFF_MAX_MS) : BACKOFF_START_MS;
+          state.backoffUntil = Date.now() + state.backoffMs;
         }
-      } else fail++;
-    });
-
-    if (ok > 0) {
-      // keep pools from chains that weren't part of this scan so toggling back is instant
-      for (const [k, v] of state.pools) {
-        if (!nets.includes(v.net) && !fresh.has(k)) fresh.set(k, v);
       }
-      state.pools = fresh;
     }
+    await boosts;
 
-    state.loading = false;
+    if (ok && !failed) { state.backoffMs = 0; }
+    state.lastError = cycleError;
     $('refreshBtn').disabled = false;
-    $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
-    $('status').innerHTML = fail && !ok
-      ? '<span class="dot err"></span>API unreachable — retrying next cycle'
-      : fail ? '<span class="dot err"></span>Partial data (' + fail + ' source(s) failed)'
-             : '<span class="dot"></span>Live';
+
+    const stamp = fmtTime(Date.now());
+    if (!cycleError) {
+      setStatus('Updated ' + stamp);
+    } else {
+      const retry = state.backoffUntil > Date.now() ? ' Next try ' + fmtTime(state.backoffUntil) + '.' : '';
+      const missed = failed + skipped;
+      if (ok) setStatus(`Updated ${stamp}, but ${missed} of ${jobs.length} requests failed (${cycleError.message}); older data shown for those.${retry}`);
+      else setStatus(`Update failed at ${stamp}: ${cycleError.message}.${hasAnyData() ? ' Showing older data.' : ''}${retry}`, true);
+    }
     render();
   }
 
+  const hasAnyData = () => state.cache.size > 0;
+
+  async function refresh(force) {
+    if (state.running) { state.rerun = true; return; }
+    state.running = true;
+    clearTimeout(state.timer);
+    try {
+      await runCycle(force);
+    } finally {
+      state.running = false;
+      $('refreshBtn').disabled = false;
+    }
+    if (state.rerun) { state.rerun = false; return refresh(false); }
+    schedule();
+  }
+
   function schedule() {
-    clearInterval(state.timer);
-    if (state.auto) state.timer = setInterval(refresh, REFRESH_MS);
+    clearTimeout(state.timer);
+    if (!state.auto) return;
+    // Measured from the start of the last cycle, since a cycle itself can take up to ~35 s.
+    const now = Date.now();
+    const delay = Math.max(state.cycleStart + REFRESH_MS - now, state.backoffUntil - now, 1000);
+    state.timer = setTimeout(() => {
+      // Don't spend the shared rate limit on a tab nobody is looking at.
+      if (document.hidden) { state.hiddenSkip = true; return; }
+      refresh(true);
+    }, delay);
   }
 
   // ---------- UI wiring ----------
   function buildChainToggles() {
     $('chains').innerHTML = NETWORKS.map(n =>
-      `<button class="chip-toggle ${state.chains.has(n.id) ? 'on' : ''}" data-net="${n.id}">${n.label}</button>`
+      `<button type="button" data-net="${n.id}" aria-pressed="${state.chains.has(n.id)}">${n.label}</button>`
     ).join('');
   }
 
@@ -685,36 +923,44 @@
     if (!btn) return;
     const id = btn.dataset.net;
     if (state.chains.has(id)) {
-      if (state.chains.size === 1) return; // keep at least one
+      if (state.chains.size === 1) return; // at least one chain stays selected
       state.chains.delete(id);
-    } else state.chains.add(id);
+    } else {
+      state.chains.add(id);
+    }
     buildChainToggles();
-    refresh();
+    refresh(false);
   });
 
-  for (const id of ['maxMc', 'minLiq', 'minBuyers', 'minH1', 'minSafety', 'sortBy'])
+  for (const id of ['maxMc', 'minLiq', 'minBuyers', 'minH1', 'minRisk', 'sortBy']) {
     $(id).addEventListener('change', render);
+  }
 
-  $('refreshBtn').addEventListener('click', refresh);
-  $('autoBtn').addEventListener('click', () => {
-    state.auto = !state.auto;
-    $('autoBtn').textContent = 'Auto-refresh: ' + (state.auto ? 'ON' : 'OFF');
-    $('autoBtn').classList.toggle('on', state.auto);
-    schedule();
+  $('refreshBtn').addEventListener('click', () => refresh(true));
+
+  $('auto').addEventListener('change', (e) => {
+    state.auto = e.target.checked;
+    if (state.auto) refresh(false);
+    else clearTimeout(state.timer);
   });
 
-  $('grid').addEventListener('click', (e) => {
-    const btn = e.target.closest('.expand');
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.hiddenSkip) {
+      state.hiddenSkip = false;
+      refresh(false);
+    }
+  });
+
+  $('rows').addEventListener('click', (e) => {
+    const btn = e.target.closest('.toggle');
     if (!btn) return;
-    const card = btn.closest('.coin');
-    card.classList.toggle('open');
-    btn.textContent = card.classList.contains('open') ? 'risk details ▴' : 'risk details ▾';
+    const key = btn.dataset.key;
+    if (state.open.has(key)) state.open.delete(key); else state.open.add(key);
+    render();
   });
 
-  // ---------- boot ----------
   buildChainToggles();
-  refresh();
-  schedule();
+  refresh(true);
 })();
 </script>
 </body>
